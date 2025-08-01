@@ -1,0 +1,26 @@
+## Discord AI Chatbot
+### Main features
+- Listen to a channel A (configurable)'s messages and response.
+- Join a voice channel and listen to messages in channel A then response through a TTS service (TTS service information will provide below).
+- The response is generated with AI.
+- This discord bot can use function calling to read user data base on their discord ID, to give more information about that user for more contextful (and in-character) response.
+- Not just reading, it can write data about an user (base on their discord ID) for future context.
+
+>[!IMPORTANT]
+So the main idea is the more time this bot stays in the server, the more knowledge it learns about that server’s members.
+
+### Database
+We should have a database to store user information, you decide the columns and database type (SQL or non-SQL)
+
+### TTS Service
+This is a required format of the TTS service, the bot must send a POST request to https://viettelai.vn/tts/speech_synthesis with body below to get the audio:
+```json
+{
+  "speed":"1.0",
+  "text": {tts_payload},
+  "token": {token},
+  "tts_return_option": 2 // 2 means wav and 3 means mp3, you can choose what suitable,
+  "voice": "hn-quynhanh",
+  "without_filter": false
+}
+```

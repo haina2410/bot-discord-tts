@@ -3,7 +3,9 @@ import dotenv from 'dotenv';
 import { config } from '../config/bot.js';
 import { loadEvents } from './utils/eventLoader.js';
 import { ChannelManager } from './utils/channelManager.js';
-import { setChannelManager } from './events/messageCreate.js';
+import { MessageProcessor } from './utils/messageProcessor.js';
+import { CommandHandler } from './utils/commandHandler.js';
+import { setChannelManager, setMessageProcessor, setCommandHandler } from './events/messageCreate.js';
 
 // Load environment variables
 dotenv.config();
@@ -29,6 +31,14 @@ client.commands = new Collection();
 // Initialize channel manager
 const channelManager = new ChannelManager(client);
 setChannelManager(channelManager);
+
+// Initialize message processor
+const messageProcessor = new MessageProcessor(client.user?.id);
+setMessageProcessor(messageProcessor);
+
+// Initialize command handler
+const commandHandler = new CommandHandler(messageProcessor);
+setCommandHandler(commandHandler);
 
 // Load event handlers
 loadEvents(client);

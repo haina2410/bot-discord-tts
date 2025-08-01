@@ -1,17 +1,29 @@
 import { Events, Message } from 'discord.js';
 import { Logger } from '../utils/logger.js';
 import { ChannelManager } from '../utils/channelManager.js';
+import { MessageProcessor } from '../utils/messageProcessor.js';
+import { CommandHandler } from '../utils/commandHandler.js';
 
-// Global channel manager instance (will be set by main bot)
+// Global instances (will be set by main bot)
 let channelManager: ChannelManager;
+let messageProcessor: MessageProcessor;
+let commandHandler: CommandHandler;
 
 export function setChannelManager(manager: ChannelManager) {
     channelManager = manager;
 }
 
+export function setMessageProcessor(processor: MessageProcessor) {
+    messageProcessor = processor;
+}
+
+export function setCommandHandler(handler: CommandHandler) {
+    commandHandler = handler;
+}
+
 export default {
     name: Events.MessageCreate,
-    execute(message: Message) {
+    async execute(message: Message) {
         // Ignore messages from bots
         if (message.author.bot) return;
         
@@ -24,41 +36,33 @@ export default {
             ? channelManager.getChannelInfo(message.channel)
             : { name: 'Unknown', type: 'Unknown', isListening: true };
         
-        Logger.info(`📨 Message from ${message.author.tag} in #${channelInfo.name} (${channelInfo.type}): ${message.content}`);
-        
-        // Basic message processing
-        const messageData = {
-            id: message.id,
-            content: message.content,
-            author: {
-                id: message.author.id,
-                username: message.author.username,
-                displayName: message.author.displayName,
-                tag: message.author.tag,
-            },
-            channel: {
-                id: message.channel.id,
-                name: channelInfo.name,
-                type: channelInfo.type,
-                isListening: channelInfo.isListening,
-            },
-            guild: {
-                id: message.guild?.id,
-                name: message.guild?.name,
-            },
-            timestamp: message.createdTimestamp,
-        };
+        // Process message with enhanced processor
+        if (!messageProcessor) {
+            Logger.warn('Message processor not initialized, using basic logging');
+            Logger.info(`📨 Message from ${message.author.tag} in #${channelInfo.name}: ${message.content}`);
+            return;
+        }
 
-        // TODO: Process message with AI (will be implemented in Task 3)
+        const processedMessage = messageProcessor.processMessage(message, channelInfo);
+        messageProcessor.logMessage(processedMessage);
+
+        // Handle commands
+        if (processedMessage.messageType === 'command' && commandHandler) {
+            const handled = await commandHandler.handleCommand(message);
+            if (handled) {
+                return; // Command was handled, no further processing needed
+            }
+        }
+
+        // Handle mentions and AI-worthy messages
+        if (messageProcessor.shouldTriggerAI(processedMessage)) {
+            Logger.info('🧠 Message should trigger AI response (not yet implemented)');
+            // TODO: Process message with AI (will be implemented in Task 3)
+        }
+
         // TODO: Store user data in database (will be implemented in Task 6-7)
         
-        // For now, just log the structured data
-        Logger.debug('📊 Processed message data:', messageData);
-        
-        // Simple echo response for testing (remove later)
-        if (message.content.toLowerCase().startsWith('!test')) {
-            message.reply('🤖 Bot is working! Ready for AI integration.');
-            Logger.success(`✅ Test command executed by ${message.author.tag}`);
-        }
+        // Log the structured data for debugging
+        Logger.debug('📊 Processed message data:', processedMessage);
     },
 };

@@ -3,12 +3,14 @@
 ## Development Setup
 
 1. **Prerequisites**
+
    - [Bun](https://bun.sh/) (latest version)
    - Discord Bot Token
    - OpenAI API Key
    - ViettelAI TTS Token
 
 2. **Installation**
+
    ```bash
    git clone <repository-url>
    cd bot-discord
@@ -16,6 +18,7 @@
    ```
 
 3. **Environment Setup**
+
    ```bash
    cp .env.example .env
    # Edit .env with your API keys and configuration
@@ -50,6 +53,7 @@
 ## Commit Convention
 
 Use conventional commits:
+
 - `feat:` - New features
 - `fix:` - Bug fixes
 - `docs:` - Documentation updates

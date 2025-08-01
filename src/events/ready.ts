@@ -1,6 +1,6 @@
 import { Client, Events } from 'discord.js';
 import { Logger } from '../utils/logger.js';
-import { config } from '../../config/bot.js';
+import { ChannelManager } from '../utils/channelManager.js';
 
 export default {
     name: Events.ClientReady,
@@ -11,29 +11,12 @@ export default {
         Logger.info(`Connected to ${client.guilds.cache.size} server(s)`);
         Logger.info(`Serving ${client.users.cache.size} users`);
         
-        // Verify configuration
-        if (config.listenChannelId) {
-            const channel = client.channels.cache.get(config.listenChannelId);
-            if (channel) {
-                const channelName = 'name' in channel ? channel.name : channel.id;
-                Logger.success(`✅ Found target channel: #${channelName}`);
-            } else {
-                Logger.warn(`⚠️  Target channel not found: ${config.listenChannelId}`);
-            }
-        } else {
-            Logger.warn('⚠️  No LISTEN_CHANNEL_ID configured - bot will listen to all channels');
-        }
-
-        // Check voice channel if configured
-        if (config.voiceChannelId) {
-            const voiceChannel = client.channels.cache.get(config.voiceChannelId);
-            if (voiceChannel) {
-                const voiceChannelName = 'name' in voiceChannel ? voiceChannel.name : voiceChannel.id;
-                Logger.success(`✅ Found voice channel: ${voiceChannelName}`);
-            } else {
-                Logger.warn(`⚠️  Voice channel not found: ${config.voiceChannelId}`);
-            }
-        }
+        // Initialize and log channel configuration
+        const channelManager = new ChannelManager(client);
+        channelManager.logConfiguration();
+        
+        const stats = channelManager.getChannelStats();
+        Logger.info(`📊 Channel Stats: ${stats.totalChannels} total, ${stats.listenChannels} listening, ${stats.ignoredChannels} ignored`);
         
         // Set bot activity status
         client.user?.setActivity('Learning about server members', { 

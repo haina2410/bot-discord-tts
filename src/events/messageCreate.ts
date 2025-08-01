@@ -1,6 +1,13 @@
 import { Events, Message } from 'discord.js';
-import { config } from '../../config/bot.js';
 import { Logger } from '../utils/logger.js';
+import { ChannelManager } from '../utils/channelManager.js';
+
+// Global channel manager instance (will be set by main bot)
+let channelManager: ChannelManager;
+
+export function setChannelManager(manager: ChannelManager) {
+    channelManager = manager;
+}
 
 export default {
     name: Events.MessageCreate,
@@ -8,15 +15,16 @@ export default {
         // Ignore messages from bots
         if (message.author.bot) return;
         
-        // Only listen to the configured channel (if specified)
-        if (config.listenChannelId && message.channel.id !== config.listenChannelId) {
+        // Check if we should listen to this channel
+        if (channelManager && !channelManager.shouldListenToChannel(message.channel.id)) {
             return;
         }
 
-        const channelName = message.channel.type === 1 ? 'DM' : 
-                           'name' in message.channel ? message.channel.name : 'Unknown';
+        const channelInfo = channelManager 
+            ? channelManager.getChannelInfo(message.channel)
+            : { name: 'Unknown', type: 'Unknown', isListening: true };
         
-        Logger.info(`📨 Message from ${message.author.tag} in #${channelName}: ${message.content}`);
+        Logger.info(`📨 Message from ${message.author.tag} in #${channelInfo.name} (${channelInfo.type}): ${message.content}`);
         
         // Basic message processing
         const messageData = {
@@ -30,8 +38,9 @@ export default {
             },
             channel: {
                 id: message.channel.id,
-                name: channelName,
-                type: message.channel.type,
+                name: channelInfo.name,
+                type: channelInfo.type,
+                isListening: channelInfo.isListening,
             },
             guild: {
                 id: message.guild?.id,

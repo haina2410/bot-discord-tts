@@ -2,6 +2,8 @@ import { Client, GatewayIntentBits, Collection } from 'discord.js';
 import dotenv from 'dotenv';
 import { config } from '../config/bot.js';
 import { loadEvents } from './utils/eventLoader.js';
+import { ChannelManager } from './utils/channelManager.js';
+import { setChannelManager } from './events/messageCreate.js';
 
 // Load environment variables
 dotenv.config();
@@ -23,6 +25,10 @@ const client: ExtendedClient = new Client({
 
 // Initialize commands collection
 client.commands = new Collection();
+
+// Initialize channel manager
+const channelManager = new ChannelManager(client);
+setChannelManager(channelManager);
 
 // Load event handlers
 loadEvents(client);

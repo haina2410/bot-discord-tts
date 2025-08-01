@@ -1,10 +1,12 @@
 import { Message } from 'discord.js';
 import { OpenAIService, type ConversationContext, type AIResponse } from './openaiService.js';
+import { ContextManager, type MessageContext } from './contextManager.js';
 import { Logger } from '../utils/logger.js';
 import type { ProcessedMessage } from '../utils/messageProcessor.js';
 
 export class AIManager {
     private openaiService: OpenAIService;
+    private contextManager: ContextManager;
     private conversationHistory = new Map<string, Array<{
         role: 'user' | 'assistant';
         content: string;
@@ -14,6 +16,7 @@ export class AIManager {
 
     constructor() {
         this.openaiService = new OpenAIService();
+        this.contextManager = new ContextManager();
     }
 
     /**
@@ -45,17 +48,28 @@ export class AIManager {
         originalMessage: Message
     ): Promise<string | null> {
         try {
-            // Build conversation context
-            const context = this.buildConversationContext(processedMessage);
+            // Build comprehensive message context
+            const conversationKey = `${processedMessage.guild.id}-${processedMessage.channel.id}`;
+            const history = this.conversationHistory.get(conversationKey) || [];
+            const messageContext = this.contextManager.buildMessageContext(processedMessage, history);
+            
+            // Check if we should generate a response based on context
+            if (!this.contextManager.shouldGenerateResponse(messageContext)) {
+                Logger.info(`🤔 Message relevance too low (${Math.round(messageContext.relevanceScore * 100)}%), skipping AI response`);
+                return null;
+            }
+            
+            // Build conversation context for OpenAI
+            const openaiContext = this.buildConversationContext(processedMessage, messageContext);
             
             // Generate AI response
-            const aiResponse = await this.openaiService.generateResponse(processedMessage, context);
+            const aiResponse = await this.openaiService.generateResponse(processedMessage, openaiContext);
             
             // Store the conversation in history
             this.addToConversationHistory(processedMessage, aiResponse);
             
-            // Log the interaction
-            this.logInteraction(processedMessage, aiResponse);
+            // Log the interaction with context
+            this.logInteraction(processedMessage, aiResponse, messageContext);
             
             return aiResponse.content;
             
@@ -70,9 +84,35 @@ export class AIManager {
     /**
      * Build conversation context for AI
      */
-    private buildConversationContext(message: ProcessedMessage): ConversationContext {
+    private buildConversationContext(
+        message: ProcessedMessage, 
+        messageContext?: MessageContext
+    ): ConversationContext {
         const conversationKey = `${message.guild.id}-${message.channel.id}`;
         const recentMessages = this.conversationHistory.get(conversationKey) || [];
+
+        // Build user context from profile and context manager
+        let userContextString = '';
+        if (messageContext?.userProfile) {
+            const profile = messageContext.userProfile;
+            const contextParts = [];
+            
+            if (profile.personality.length > 0) {
+                contextParts.push(`Personality: ${profile.personality.join(', ')}`);
+            }
+            
+            if (profile.recentTopics.length > 0) {
+                contextParts.push(`Interests: ${profile.recentTopics.slice(-5).join(', ')}`);
+            }
+            
+            contextParts.push(`Interactions: ${profile.interactionCount}`);
+            
+            if (messageContext.contextualCues.length > 0) {
+                contextParts.push(`Context: ${messageContext.contextualCues.join(', ')}`);
+            }
+            
+            userContextString = contextParts.join(' | ');
+        }
 
         return {
             userId: message.author.id,
@@ -82,8 +122,7 @@ export class AIManager {
             guildId: message.guild.id,
             guildName: message.guild.name,
             recentMessages,
-            // TODO: Add user context from database (Task 6-7)
-            userContext: undefined,
+            userContext: userContextString || undefined,
         };
     }
 
@@ -117,11 +156,19 @@ export class AIManager {
     /**
      * Log the AI interaction for monitoring
      */
-    private logInteraction(message: ProcessedMessage, aiResponse: AIResponse) {
+    private logInteraction(
+        message: ProcessedMessage, 
+        aiResponse: AIResponse, 
+        messageContext?: MessageContext
+    ) {
         Logger.info(`🤖 AI Interaction Summary:`);
         Logger.info(`   User: ${message.author.username} in #${message.channel.name}`);
         Logger.info(`   Input: ${message.cleanContent.substring(0, 100)}${message.cleanContent.length > 100 ? '...' : ''}`);
         Logger.info(`   Output: ${aiResponse.content.substring(0, 100)}${aiResponse.content.length > 100 ? '...' : ''}`);
+        
+        if (messageContext) {
+            Logger.info(`   Context: ${this.contextManager.getContextSummary(messageContext)}`);
+        }
         
         if (aiResponse.usage) {
             Logger.info(`   Tokens: ${aiResponse.usage.totalTokens} (${aiResponse.usage.promptTokens} prompt + ${aiResponse.usage.completionTokens} completion)`);
@@ -166,11 +213,16 @@ export class AIManager {
             totalMessages += history.length;
         });
 
+        const contextStats = this.contextManager.getStats();
+
         return {
             totalConversations,
             totalMessages,
             averageMessagesPerConversation: totalConversations > 0 ? Math.round(totalMessages / totalConversations) : 0,
             modelInfo: this.openaiService.getModelInfo(),
+            userProfiles: contextStats.userProfiles,
+            channelContexts: contextStats.channelContexts,
+            totalInteractions: contextStats.totalInteractions,
         };
     }
 
@@ -222,5 +274,12 @@ export class AIManager {
             Logger.error('❌ AI test failed:', error);
             throw error;
         }
+    }
+
+    /**
+     * Perform periodic cleanup of old context data
+     */
+    performCleanup() {
+        this.contextManager.cleanup();
     }
 }

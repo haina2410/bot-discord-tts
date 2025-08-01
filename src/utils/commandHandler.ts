@@ -145,6 +145,49 @@ export class CommandHandler {
             }
         });
 
+        // AI stats command
+        this.registerCommand({
+            name: 'ai-stats',
+            description: 'Show AI system statistics and context information',
+            usage: '!ai-stats',
+            aliases: ['aistats'],
+            execute: async (message: Message) => {
+                try {
+                    const aiManager = (message.client as any).aiManager;
+                    
+                    if (!aiManager) {
+                        await message.reply('❌ AI Manager not initialized. Please check the logs.');
+                        return;
+                    }
+
+                    const stats = aiManager.getStats();
+                    
+                    const embed = {
+                        title: '🧠 AI System Statistics',
+                        fields: [
+                            { name: '💬 Conversations', value: stats.totalConversations.toString(), inline: true },
+                            { name: '📝 Total Messages', value: stats.totalMessages.toString(), inline: true },
+                            { name: '📊 Avg Messages/Conv', value: stats.averageMessagesPerConversation.toString(), inline: true },
+                            { name: '👥 User Profiles', value: stats.userProfiles.toString(), inline: true },
+                            { name: '📺 Channel Contexts', value: stats.channelContexts.toString(), inline: true },
+                            { name: '🔄 Total Interactions', value: stats.totalInteractions.toString(), inline: true },
+                            { name: '🤖 AI Model', value: stats.modelInfo.model, inline: true },
+                            { name: '🎛️ Temperature', value: stats.modelInfo.temperature.toString(), inline: true },
+                            { name: '📏 Max Tokens', value: stats.modelInfo.maxTokens.toString(), inline: true },
+                        ],
+                        color: 0x00AE86,
+                        timestamp: new Date().toISOString(),
+                        footer: { text: 'AI system is learning about server members' }
+                    };
+                    
+                    await message.reply({ embeds: [embed] });
+                } catch (error) {
+                    Logger.error('Error in ai-stats command:', error);
+                    await message.reply('❌ An error occurred while fetching AI statistics.');
+                }
+            }
+        });
+
         // AI test command
         this.registerCommand({
             name: 'ai-test',

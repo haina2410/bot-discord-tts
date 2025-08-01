@@ -5,7 +5,8 @@ import { loadEvents } from './utils/eventLoader.js';
 import { ChannelManager } from './utils/channelManager.js';
 import { MessageProcessor } from './utils/messageProcessor.js';
 import { CommandHandler } from './utils/commandHandler.js';
-import { setChannelManager, setMessageProcessor, setCommandHandler } from './events/messageCreate.js';
+import { AIManager } from './ai/aiManager.js';
+import { setChannelManager, setMessageProcessor, setCommandHandler, setAIManager } from './events/messageCreate.js';
 
 // Load environment variables
 dotenv.config();
@@ -39,6 +40,13 @@ setMessageProcessor(messageProcessor);
 // Initialize command handler
 const commandHandler = new CommandHandler(messageProcessor);
 setCommandHandler(commandHandler);
+
+// Initialize AI manager
+const aiManager = new AIManager();
+setAIManager(aiManager);
+
+// Store AI manager reference in client for commands
+(client as any).aiManager = aiManager;
 
 // Load event handlers
 loadEvents(client);

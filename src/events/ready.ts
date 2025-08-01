@@ -5,7 +5,7 @@ import { ChannelManager } from '../utils/channelManager.js';
 export default {
     name: Events.ClientReady,
     once: true,
-    execute(client: Client) {
+    async execute(client: Client) {
         Logger.success('Discord AI Chatbot is ready!');
         Logger.info(`Logged in as: ${client.user?.tag}`);
         Logger.info(`Connected to ${client.guilds.cache.size} server(s)`);
@@ -23,7 +23,27 @@ export default {
             type: 3 // Watching
         });
         
+        // Initialize AI Manager
+        const aiManager = (client as any).aiManager;
+        if (aiManager) {
+            Logger.info('🧠 Initializing AI Manager...');
+            try {
+                const aiInitialized = await aiManager.initialize();
+                if (aiInitialized) {
+                    Logger.success('✅ AI Manager initialized successfully');
+                } else {
+                    Logger.error('❌ AI Manager initialization failed');
+                }
+            } catch (error) {
+                Logger.error('❌ Error initializing AI Manager:', error);
+            }
+        } else {
+            Logger.warn('⚠️ AI Manager not found on client');
+        }
+
         Logger.success('🎯 Bot is now listening for messages and learning...');
         Logger.info('💡 Send "!test" in your configured channel to verify functionality');
+        Logger.info('🧠 Send "!ai-test" to test AI response generation');
+        Logger.info('👋 Mention the bot or reply to its messages to trigger AI responses');
     },
 };

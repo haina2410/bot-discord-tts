@@ -3,11 +3,13 @@ import { Logger } from '../utils/logger.js';
 import { ChannelManager } from '../utils/channelManager.js';
 import { MessageProcessor } from '../utils/messageProcessor.js';
 import { CommandHandler } from '../utils/commandHandler.js';
+import { AIManager } from '../ai/aiManager.js';
 
 // Global instances (will be set by main bot)
 let channelManager: ChannelManager;
 let messageProcessor: MessageProcessor;
 let commandHandler: CommandHandler;
+let aiManager: AIManager;
 
 export function setChannelManager(manager: ChannelManager) {
     channelManager = manager;
@@ -19,6 +21,10 @@ export function setMessageProcessor(processor: MessageProcessor) {
 
 export function setCommandHandler(handler: CommandHandler) {
     commandHandler = handler;
+}
+
+export function setAIManager(manager: AIManager) {
+    aiManager = manager;
 }
 
 export default {
@@ -56,8 +62,26 @@ export default {
 
         // Handle mentions and AI-worthy messages
         if (messageProcessor.shouldTriggerAI(processedMessage)) {
-            Logger.info('🧠 Message should trigger AI response (not yet implemented)');
-            // TODO: Process message with AI (will be implemented in Task 3)
+            Logger.info('🧠 Message should trigger AI response');
+            
+            if (aiManager) {
+                try {
+                    // Generate AI response
+                    const aiResponse = await aiManager.processMessage(processedMessage, message);
+                    
+                    if (aiResponse) {
+                        // Send AI response
+                        await message.reply(aiResponse);
+                        Logger.success(`✅ AI response sent to ${message.author.tag}`);
+                    }
+                } catch (error) {
+                    Logger.error('❌ Error processing AI response:', error);
+                    // Send fallback response
+                    await message.reply("I'm having trouble thinking right now, but I'm here and listening! 🤖");
+                }
+            } else {
+                Logger.warn('⚠️ AI Manager not initialized, cannot process AI response');
+            }
         }
 
         // TODO: Store user data in database (will be implemented in Task 6-7)

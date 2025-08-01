@@ -145,6 +145,37 @@ export class CommandHandler {
             }
         });
 
+        // AI test command
+        this.registerCommand({
+            name: 'ai-test',
+            description: 'Test AI response generation',
+            usage: '!ai-test',
+            aliases: ['aitest'],
+            execute: async (message: Message) => {
+                try {
+                    // This will be set by the main bot when AIManager is initialized
+                    const aiManager = (message.client as any).aiManager;
+                    
+                    if (!aiManager) {
+                        await message.reply('❌ AI Manager not initialized. Please check the logs.');
+                        return;
+                    }
+
+                    const reply = await message.reply('🧠 Testing AI response generation...');
+                    
+                    try {
+                        const testResponse = await aiManager.testAI();
+                        await reply.edit(`✅ AI Test Successful!\n\n**Response:** ${testResponse}`);
+                    } catch (error) {
+                        await reply.edit(`❌ AI Test Failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                } catch (error) {
+                    Logger.error('Error in ai-test command:', error);
+                    await message.reply('❌ An error occurred during AI testing.');
+                }
+            }
+        });
+
         // Status command
         this.registerCommand({
             name: 'status',
@@ -161,7 +192,7 @@ export class CommandHandler {
                         { name: '⏱️ Uptime', value: uptimeString, inline: true },
                         { name: '📊 Memory Usage', value: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`, inline: true },
                         { name: '🏷️ Version', value: 'v1.0.0-dev', inline: true },
-                        { name: '🧠 AI Status', value: 'Not yet integrated', inline: true },
+                        { name: '🧠 AI Status', value: (message.client as any).aiManager ? 'Integrated ✅' : 'Not integrated ❌', inline: true },
                         { name: '🔊 TTS Status', value: 'Not yet integrated', inline: true },
                         { name: '💾 Database Status', value: 'Not yet integrated', inline: true }
                     ],

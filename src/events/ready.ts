@@ -41,9 +41,36 @@ export default {
             Logger.warn('⚠️ AI Manager not found on client');
         }
 
+        // Initialize TTS Manager
+        const ttsManager = (client as any).ttsManager;
+        if (ttsManager) {
+            Logger.info('🔊 Initializing TTS Manager...');
+            try {
+                const ttsInitialized = await ttsManager.initialize();
+                if (ttsInitialized) {
+                    Logger.success('✅ TTS Manager initialized successfully');
+                    
+                    // Test TTS pipeline
+                    const pipelineTest = await ttsManager.testTTSPipeline();
+                    if (pipelineTest) {
+                        Logger.success('✅ TTS pipeline test passed');
+                    } else {
+                        Logger.warn('⚠️ TTS pipeline test failed');
+                    }
+                } else {
+                    Logger.error('❌ TTS Manager initialization failed');
+                }
+            } catch (error) {
+                Logger.error('❌ Error initializing TTS Manager:', error);
+            }
+        } else {
+            Logger.warn('⚠️ TTS Manager not found on client');
+        }
+
         Logger.success('🎯 Bot is now listening for messages and learning...');
         Logger.info('💡 Send "!test" in your configured channel to verify functionality');
         Logger.info('🧠 Send "!ai-test" to test AI response generation');
-        Logger.info('👋 Mention the bot or reply to its messages to trigger AI responses');
+        Logger.info('🔊 AI responses will be converted to speech and played in voice channels');
+        Logger.info('👋 Mention the bot or reply to its messages to trigger AI responses with TTS');
     },
 };

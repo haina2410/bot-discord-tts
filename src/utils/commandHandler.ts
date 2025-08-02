@@ -1,6 +1,7 @@
 import { Message } from 'discord.js';
 import { Logger } from './logger.js';
 import { MessageProcessor } from './messageProcessor.js';
+import { ttsTestCommand, aiTtsTestCommand } from '../commands/ttsTest.js';
 
 export interface Command {
     name: string;
@@ -236,7 +237,7 @@ export class CommandHandler {
                         { name: '📊 Memory Usage', value: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`, inline: true },
                         { name: '🏷️ Version', value: 'v1.0.0-dev', inline: true },
                         { name: '🧠 AI Status', value: (message.client as any).aiManager ? 'Integrated ✅' : 'Not integrated ❌', inline: true },
-                        { name: '🔊 TTS Status', value: 'Not yet integrated', inline: true },
+                        { name: '🔊 TTS Status', value: (message.client as any).ttsManager ? 'Integrated ✅' : 'Not integrated ❌', inline: true },
                         { name: '💾 Database Status', value: 'Not yet integrated', inline: true }
                     ],
                     color: 0x00AE86,
@@ -244,6 +245,26 @@ export class CommandHandler {
                 };
                 
                 await message.reply({ embeds: [embed] });
+            }
+        });
+
+        // TTS test command
+        this.registerCommand({
+            name: ttsTestCommand.name,
+            description: ttsTestCommand.description,
+            usage: `!${ttsTestCommand.name}`,
+            execute: async (message: Message, args: string[]) => {
+                await ttsTestCommand.execute(message);
+            }
+        });
+
+        // AI + TTS test command
+        this.registerCommand({
+            name: aiTtsTestCommand.name,
+            description: aiTtsTestCommand.description,
+            usage: `!${aiTtsTestCommand.name}`,
+            execute: async (message: Message, args: string[]) => {
+                await aiTtsTestCommand.execute(message);
             }
         });
 

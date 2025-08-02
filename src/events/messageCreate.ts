@@ -4,12 +4,16 @@ import { ChannelManager } from '../utils/channelManager.js';
 import { MessageProcessor } from '../utils/messageProcessor.js';
 import { CommandHandler } from '../utils/commandHandler.js';
 import { AIManager } from '../ai/aiManager.js';
+import { TTSManager } from '../tts/ttsManager.js';
+import { VoiceManager } from '../utils/voiceManager.js';
 
 // Global instances (will be set by main bot)
 let channelManager: ChannelManager;
 let messageProcessor: MessageProcessor;
 let commandHandler: CommandHandler;
 let aiManager: AIManager;
+let ttsManager: TTSManager;
+let voiceManager: VoiceManager;
 
 export function setChannelManager(manager: ChannelManager) {
     channelManager = manager;
@@ -25,6 +29,14 @@ export function setCommandHandler(handler: CommandHandler) {
 
 export function setAIManager(manager: AIManager) {
     aiManager = manager;
+}
+
+export function setTTSManager(manager: TTSManager) {
+    ttsManager = manager;
+}
+
+export function setVoiceManager(manager: VoiceManager) {
+    voiceManager = manager;
 }
 
 export default {
@@ -70,9 +82,38 @@ export default {
                     const aiResponse = await aiManager.processMessage(processedMessage, message);
                     
                     if (aiResponse) {
-                        // Send AI response
+                        // Send AI response as text
                         await message.reply(aiResponse);
                         Logger.success(`✅ AI response sent to ${message.author.tag}`);
+
+                        // Convert AI response to speech and play in voice channel
+                        if (ttsManager && voiceManager && message.guild) {
+                            try {
+                                Logger.info('🔊 Converting AI response to speech...');
+                                
+                                // Generate TTS audio for Discord playback (temporary file)
+                                const ttsResult = await ttsManager.textToSpeechForDiscord(aiResponse);
+                                
+                                if (ttsResult.success && ttsResult.tempAudioPath) {
+                                    // Play audio in voice channel
+                                    const playbackResult = await voiceManager.playAudioFile(
+                                        message.guild.id, 
+                                        ttsResult.tempAudioPath
+                                    );
+                                    
+                                    if (playbackResult.success) {
+                                        Logger.success(`🎵 TTS audio played successfully (${playbackResult.duration}ms)`);
+                                    } else {
+                                        Logger.warn(`⚠️ TTS audio generation succeeded but playback failed: ${playbackResult.error}`);
+                                    }
+                                } else {
+                                    Logger.warn(`⚠️ TTS conversion failed: ${ttsResult.error}`);
+                                }
+                            } catch (ttsError) {
+                                Logger.error('❌ TTS processing error:', ttsError);
+                                // Don't fail the entire response if TTS fails
+                            }
+                        }
                     }
                 } catch (error) {
                     Logger.error('❌ Error processing AI response:', error);

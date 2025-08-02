@@ -6,7 +6,9 @@ import { ChannelManager } from './utils/channelManager.js';
 import { MessageProcessor } from './utils/messageProcessor.js';
 import { CommandHandler } from './utils/commandHandler.js';
 import { AIManager } from './ai/aiManager.js';
-import { setChannelManager, setMessageProcessor, setCommandHandler, setAIManager } from './events/messageCreate.js';
+import { TTSManager } from './tts/ttsManager.js';
+import { VoiceManager } from './utils/voiceManager.js';
+import { setChannelManager, setMessageProcessor, setCommandHandler, setAIManager, setTTSManager, setVoiceManager } from './events/messageCreate.js';
 
 // Load environment variables
 dotenv.config();
@@ -45,8 +47,18 @@ setCommandHandler(commandHandler);
 const aiManager = new AIManager();
 setAIManager(aiManager);
 
-// Store AI manager reference in client for commands
+// Initialize TTS manager
+const ttsManager = new TTSManager();
+setTTSManager(ttsManager);
+
+// Initialize voice manager
+const voiceManager = new VoiceManager(client);
+setVoiceManager(voiceManager);
+
+// Store managers reference in client for commands
 (client as any).aiManager = aiManager;
+(client as any).ttsManager = ttsManager;
+(client as any).voiceManager = voiceManager;
 
 // Load event handlers
 loadEvents(client);

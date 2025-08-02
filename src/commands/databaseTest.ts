@@ -3,7 +3,7 @@ import { Logger } from '../utils/logger.js';
 
 export const databaseTestCommand = {
     name: 'db-test',
-    description: 'Test the database connection and functionality',
+    description: 'Kiểm tra kết nối và chức năng database',
     async execute(message: Message) {
         try {
             Logger.info(`🧪 Database test command executed by ${message.author.tag}`);
@@ -12,23 +12,23 @@ export const databaseTestCommand = {
             const databaseManager = (message.client as any).databaseManager;
 
             if (!databaseManager) {
-                await message.reply('❌ Database Manager not found. Please check bot configuration.');
+                await message.reply('❌ Không tìm thấy Database Manager. Vui lòng kiểm tra cấu hình bot.');
                 return;
             }
 
-            await message.reply('🧪 Starting database integration test...');
+            await message.reply('🧪 Bắt đầu kiểm tra tích hợp database...');
 
             // Test 1: Check if database is ready
             const isReady = databaseManager.isReady();
             if (!isReady) {
-                await message.reply('❌ Database is not ready. Please wait for bot startup to complete.');
+                await message.reply('❌ Database chưa sẵn sàng. Vui lòng đợi bot khởi động hoàn tất.');
                 return;
             }
 
             // Test 2: Get database statistics
             const stats = databaseManager.getStats();
             if (!stats) {
-                await message.reply('❌ Could not retrieve database statistics.');
+                await message.reply('❌ Không thể lấy thống kê database.');
                 return;
             }
 

@@ -3,7 +3,7 @@ import { Logger } from '../utils/logger.js';
 
 export const ttsTestCommand = {
     name: 'tts-test',
-    description: 'Test the TTS (Text-to-Speech) integration',
+    description: 'Kiểm tra tích hợp TTS (Text-to-Speech)',
     async execute(message: Message) {
         try {
             Logger.info(`🧪 TTS test command executed by ${message.author.tag}`);
@@ -13,49 +13,49 @@ export const ttsTestCommand = {
             const voiceManager = (message.client as any).voiceManager;
 
             if (!ttsManager) {
-                await message.reply('❌ TTS Manager not found. Please check bot configuration.');
+                await message.reply('❌ Không tìm thấy TTS Manager. Vui lòng kiểm tra cấu hình bot.');
                 return;
             }
 
             if (!voiceManager) {
-                await message.reply('❌ Voice Manager not found. Please check bot configuration.');
+                await message.reply('❌ Không tìm thấy Voice Manager. Vui lòng kiểm tra cấu hình bot.');
                 return;
             }
 
             if (!message.guild) {
-                await message.reply('❌ This command can only be used in a server.');
+                await message.reply('❌ Lệnh này chỉ có thể được sử dụng trong server.');
                 return;
             }
 
             // Check TTS manager status
             if (!ttsManager.isReady()) {
-                await message.reply('❌ TTS Manager is not initialized. Please wait for bot startup to complete.');
+                await message.reply('❌ TTS Manager chưa được khởi tạo. Vui lòng đợi bot khởi động hoàn tất.');
                 return;
             }
 
-            await message.reply('🧪 Starting TTS integration test...');
+            await message.reply('🧪 Bắt đầu kiểm tra tích hợp TTS...');
 
             // Test 1: TTS Service Info
             const ttsStats = ttsManager.getStats();
             Logger.info('📊 TTS Stats:', ttsStats);
 
             // Test 2: Generate TTS for test message
-            const testText = 'Hello! This is a test of the text-to-speech integration. If you can hear this, the TTS system is working correctly.';
+            const testText = 'Xin chào! Đây là bài kiểm tra tích hợp text-to-speech. Nếu bạn có thể nghe thấy điều này, hệ thống TTS đang hoạt động chính xác.';
             
             Logger.info('🔊 Testing TTS generation...');
             const ttsResult = await ttsManager.textToSpeechForDiscord(testText);
 
             if (!ttsResult.success) {
-                await message.reply(`❌ TTS generation failed: ${ttsResult.error}`);
+                await message.reply(`❌ Tạo TTS thất bại: ${ttsResult.error}`);
                 return;
             }
 
             if (!ttsResult.tempAudioPath) {
-                await message.reply('❌ TTS generation succeeded but no audio file was created.');
+                await message.reply('❌ Tạo TTS thành công nhưng không có file âm thanh nào được tạo.');
                 return;
             }
 
-            await message.reply('✅ TTS generation successful! Now testing voice playback...');
+            await message.reply('✅ Tạo TTS thành công! Bây giờ đang kiểm tra phát âm thanh...');
 
             // Test 3: Voice Channel Playback
             Logger.info('🎵 Testing voice playback...');
@@ -65,33 +65,33 @@ export const ttsTestCommand = {
             );
 
             if (playbackResult.success) {
-                await message.reply(`✅ TTS integration test completed successfully! 
-🎵 Audio played in ${playbackResult.duration}ms
-🔊 TTS Service: ${ttsStats.ttsService.voice} voice at ${ttsStats.ttsService.speed} speed
-📁 Audio format: ${ttsStats.ttsService.format}
-💾 Audio files stored: ${ttsStats.audioFiles.totalFiles}`);
+                await message.reply(`✅ Kiểm tra tích hợp TTS hoàn thành thành công! 
+🎵 Âm thanh đã phát trong ${playbackResult.duration}ms
+🔊 Dịch vụ TTS: Giọng ${ttsStats.ttsService.voice} với tốc độ ${ttsStats.ttsService.speed}
+📁 Định dạng âm thanh: ${ttsStats.ttsService.format}
+💾 File âm thanh đã lưu: ${ttsStats.audioFiles.totalFiles}`);
                 
                 Logger.success('✅ TTS integration test passed completely');
             } else {
-                await message.reply(`⚠️ TTS generation worked, but voice playback failed: ${playbackResult.error}
-Please check:
-- Bot has permission to join voice channels
-- Voice channel is configured correctly: ${process.env.VOICE_CHANNEL_ID || 'Not set'}
-- Bot is connected to the voice channel`);
+                await message.reply(`⚠️ Tạo TTS thành công, nhưng phát âm thanh thất bại: ${playbackResult.error}
+Vui lòng kiểm tra:
+- Bot có quyền tham gia kênh thoại
+- Kênh thoại được cấu hình đúng: ${process.env.VOICE_CHANNEL_ID || 'Chưa thiết lập'}
+- Bot đã kết nối với kênh thoại`);
                 
                 Logger.warn('⚠️ TTS integration test partially failed: voice playback issue');
             }
 
         } catch (error) {
             Logger.error('❌ TTS test command error:', error);
-            await message.reply(`❌ TTS test failed with error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            await message.reply(`❌ Kiểm tra TTS thất bại với lỗi: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
         }
     }
 };
 
 export const aiTtsTestCommand = {
     name: 'ai-tts-test',
-    description: 'Test the complete AI + TTS pipeline',
+    description: 'Kiểm tra pipeline AI + TTS hoàn chỉnh',
     async execute(message: Message) {
         try {
             Logger.info(`🧪 AI+TTS test command executed by ${message.author.tag}`);
@@ -102,34 +102,34 @@ export const aiTtsTestCommand = {
             const voiceManager = (message.client as any).voiceManager;
 
             if (!aiManager || !ttsManager || !voiceManager) {
-                await message.reply('❌ Required managers not found. Please check bot configuration.');
+                await message.reply('❌ Không tìm thấy các manager cần thiết. Vui lòng kiểm tra cấu hình bot.');
                 return;
             }
 
             if (!message.guild) {
-                await message.reply('❌ This command can only be used in a server.');
+                await message.reply('❌ Lệnh này chỉ có thể được sử dụng trong server.');
                 return;
             }
 
-            await message.reply('🧪 Testing complete AI + TTS pipeline...');
+            await message.reply('🧪 Đang kiểm tra pipeline AI + TTS hoàn chỉnh...');
 
             // Test AI response generation
             Logger.info('🧠 Testing AI response generation...');
             const testResponse = await aiManager.testAI();
 
             if (!testResponse) {
-                await message.reply('❌ AI response generation failed.');
+                await message.reply('❌ Tạo phản hồi AI thất bại.');
                 return;
             }
 
-            await message.reply(`🧠 AI generated response: "${testResponse.substring(0, 100)}${testResponse.length > 100 ? '...' : ''}"`);
+            await message.reply(`🧠 AI đã tạo phản hồi: "${testResponse.substring(0, 100)}${testResponse.length > 100 ? '...' : ''}"`);
 
             // Test TTS conversion
             Logger.info('🔊 Converting AI response to speech...');
             const ttsResult = await ttsManager.textToSpeechForDiscord(testResponse);
 
             if (!ttsResult.success || !ttsResult.tempAudioPath) {
-                await message.reply(`❌ TTS conversion failed: ${ttsResult.error}`);
+                await message.reply(`❌ Chuyển đổi TTS thất bại: ${ttsResult.error}`);
                 return;
             }
 
@@ -141,22 +141,22 @@ export const aiTtsTestCommand = {
             );
 
             if (playbackResult.success) {
-                await message.reply(`✅ Complete AI + TTS pipeline test successful! 
-🧠 AI Response: Generated successfully
-🔊 TTS Conversion: Generated ${ttsResult.tempAudioPath}
-🎵 Voice Playback: Completed in ${playbackResult.duration}ms
+                await message.reply(`✅ Kiểm tra pipeline AI + TTS hoàn chỉnh thành công! 
+🧠 Phản hồi AI: Tạo thành công
+🔊 Chuyển đổi TTS: Đã tạo ${ttsResult.tempAudioPath}
+🎵 Phát âm thanh: Hoàn thành trong ${playbackResult.duration}ms
 
-The bot is ready to provide AI responses with text-to-speech!`);
+Bot đã sẵn sàng cung cấp phản hồi AI với text-to-speech!`);
                 
                 Logger.success('✅ Complete AI + TTS pipeline test passed');
             } else {
-                await message.reply(`⚠️ AI and TTS worked, but voice playback failed: ${playbackResult.error}`);
+                await message.reply(`⚠️ AI và TTS hoạt động, nhưng phát âm thanh thất bại: ${playbackResult.error}`);
                 Logger.warn('⚠️ AI + TTS pipeline test partially failed: voice playback issue');
             }
 
         } catch (error) {
             Logger.error('❌ AI+TTS test command error:', error);
-            await message.reply(`❌ AI+TTS test failed with error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            await message.reply(`❌ Kiểm tra AI+TTS thất bại với lỗi: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
         }
     }
 };

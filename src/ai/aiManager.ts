@@ -189,15 +189,15 @@ export class AIManager {
      */
     private getFallbackResponse(message: ProcessedMessage): string {
         const fallbackResponses = [
-            "I'm having trouble thinking right now, but I'm here and listening! 🤖",
-            "My AI brain is taking a quick break, but I appreciate you talking to me! 💭",
-            "I'm experiencing some technical difficulties, but I'm still learning about everyone here! 🔧",
-            "Sorry, I'm having a moment! But I'm always interested in what you have to say! ✨",
-            "My circuits are a bit tangled right now, but I'm still here with you all! ⚡",
+            "Mình đang gặp chút khó khăn trong việc suy nghĩ, nhưng mình vẫn ở đây và đang lắng nghe! 🤖",
+            "Bộ não AI của mình đang nghỉ ngơi một chút, nhưng mình rất cảm kích khi bạn nói chuyện với mình! 💭",
+            "Mình đang gặp một số vấn đề kỹ thuật, nhưng mình vẫn đang học hỏi về mọi người ở đây! 🔧",
+            "Xin lỗi, mình đang có chút vấn đề! Nhưng mình luôn quan tâm đến những gì bạn muốn nói! ✨",
+            "Mạch điện của mình đang hơi rối một chút, nhưng mình vẫn ở đây với tất cả mọi người! ⚡",
         ];
 
         const randomIndex = Math.floor(Math.random() * fallbackResponses.length);
-        return fallbackResponses[randomIndex] || "I'm having some technical difficulties, but I'm still here! 🤖";
+        return fallbackResponses[randomIndex] || "Mình đang gặp một số vấn đề kỹ thuật, nhưng mình vẫn ở đây! 🤖";
     }
 
     /**

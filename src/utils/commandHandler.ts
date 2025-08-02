@@ -61,7 +61,7 @@ export class CommandHandler {
             return true;
         } catch (error) {
             Logger.error(`Error executing command ${command}:`, error);
-            await message.reply('❌ An error occurred while executing that command.');
+            await message.reply('❌ Đã xảy ra lỗi khi thực hiện lệnh đó.');
             return false;
         }
     }
@@ -87,48 +87,48 @@ export class CommandHandler {
         // Test command
         this.registerCommand({
             name: 'test',
-            description: 'Test if the bot is working',
+            description: 'Kiểm tra xem bot có hoạt động không',
             usage: '!test',
             aliases: ['ping'],
             execute: async (message: Message) => {
                 const startTime = Date.now();
-                const reply = await message.reply('🤖 Bot is working! Calculating ping...');
+                const reply = await message.reply('🤖 Bot đang hoạt động! Đang tính ping...');
                 const endTime = Date.now();
                 const ping = endTime - startTime;
                 
-                await reply.edit(`🤖 Bot is working!\n📡 Ping: ${ping}ms\n⚡ Ready for AI integration!`);
+                await reply.edit(`🤖 Bot đang hoạt động!\n📡 Ping: ${ping}ms\n⚡ Sẵn sàng tích hợp AI!`);
             }
         });
 
         // Help command
         this.registerCommand({
             name: 'help',
-            description: 'Show available commands',
-            usage: '!help [command]',
+            description: 'Hiển thị các lệnh có sẵn',
+            usage: '!help [lệnh]',
             aliases: ['commands'],
             execute: async (message: Message, args: string[]) => {
                 if (args.length > 0) {
                     // Show help for specific command
                     const commandName = args[0]?.toLowerCase();
                     if (!commandName) {
-                        await message.reply('❌ Please specify a command name. Use `!help` to see all commands.');
+                        await message.reply('❌ Vui lòng chỉ định tên lệnh. Sử dụng `!help` để xem tất cả lệnh.');
                         return;
                     }
                     const command = this.commands.get(commandName);
                     
                     if (command) {
                         const embed = {
-                            title: `📖 Help: ${command.name}`,
+                            title: `📖 Trợ giúp: ${command.name}`,
                             description: command.description,
                             fields: [
-                                { name: 'Usage', value: `\`${command.usage}\``, inline: true },
-                                { name: 'Aliases', value: command.aliases?.join(', ') || 'None', inline: true }
+                                { name: 'Cách sử dụng', value: `\`${command.usage}\``, inline: true },
+                                { name: 'Tên khác', value: command.aliases?.join(', ') || 'Không có', inline: true }
                             ],
                             color: 0x00AE86
                         };
                         await message.reply({ embeds: [embed] });
                     } else {
-                        await message.reply(`❌ Command \`${commandName}\` not found. Use \`!help\` to see all commands.`);
+                        await message.reply(`❌ Không tìm thấy lệnh \`${commandName}\`. Sử dụng \`!help\` để xem tất cả lệnh.`);
                     }
                 } else {
                     // Show all commands
@@ -136,9 +136,9 @@ export class CommandHandler {
                     const commandList = commands.map(cmd => `\`!${cmd.name}\` - ${cmd.description}`).join('\n');
                     
                     const embed = {
-                        title: '📚 Available Commands',
-                        description: commandList || 'No commands available.',
-                        footer: { text: 'Use !help <command> for detailed information' },
+                        title: '📚 Các Lệnh Có Sẵn',
+                        description: commandList || 'Không có lệnh nào.',
+                        footer: { text: 'Sử dụng !help <lệnh> để xem thông tin chi tiết' },
                         color: 0x00AE86
                     };
                     
@@ -150,7 +150,7 @@ export class CommandHandler {
         // AI stats command
         this.registerCommand({
             name: 'ai-stats',
-            description: 'Show AI system statistics and context information',
+            description: 'Hiển thị thống kê hệ thống AI và thông tin ngữ cảnh',
             usage: '!ai-stats',
             aliases: ['aistats'],
             execute: async (message: Message) => {
@@ -158,34 +158,34 @@ export class CommandHandler {
                     const aiManager = (message.client as any).aiManager;
                     
                     if (!aiManager) {
-                        await message.reply('❌ AI Manager not initialized. Please check the logs.');
+                        await message.reply('❌ AI Manager chưa được khởi tạo. Vui lòng kiểm tra logs.');
                         return;
                     }
 
                     const stats = aiManager.getStats();
                     
                     const embed = {
-                        title: '🧠 AI System Statistics',
+                        title: '🧠 Thống Kê Hệ Thống AI',
                         fields: [
-                            { name: '💬 Conversations', value: stats.totalConversations.toString(), inline: true },
-                            { name: '📝 Total Messages', value: stats.totalMessages.toString(), inline: true },
-                            { name: '📊 Avg Messages/Conv', value: stats.averageMessagesPerConversation.toString(), inline: true },
-                            { name: '👥 User Profiles', value: stats.userProfiles.toString(), inline: true },
-                            { name: '📺 Channel Contexts', value: stats.channelContexts.toString(), inline: true },
-                            { name: '🔄 Total Interactions', value: stats.totalInteractions.toString(), inline: true },
-                            { name: '🤖 AI Model', value: stats.modelInfo.model, inline: true },
+                            { name: '💬 Cuộc trò chuyện', value: stats.totalConversations.toString(), inline: true },
+                            { name: '📝 Tổng tin nhắn', value: stats.totalMessages.toString(), inline: true },
+                            { name: '📊 TB tin nhắn/cuộc trò chuyện', value: stats.averageMessagesPerConversation.toString(), inline: true },
+                            { name: '👥 Hồ sơ người dùng', value: stats.userProfiles.toString(), inline: true },
+                            { name: '📺 Ngữ cảnh kênh', value: stats.channelContexts.toString(), inline: true },
+                            { name: '🔄 Tổng tương tác', value: stats.totalInteractions.toString(), inline: true },
+                            { name: '🤖 Mô hình AI', value: stats.modelInfo.model, inline: true },
                             { name: '🎛️ Temperature', value: stats.modelInfo.temperature.toString(), inline: true },
                             { name: '📏 Max Tokens', value: stats.modelInfo.maxTokens.toString(), inline: true },
                         ],
                         color: 0x00AE86,
                         timestamp: new Date().toISOString(),
-                        footer: { text: 'AI system is learning about server members' }
+                        footer: { text: 'Hệ thống AI đang học hỏi về các thành viên server' }
                     };
                     
                     await message.reply({ embeds: [embed] });
                 } catch (error) {
                     Logger.error('Error in ai-stats command:', error);
-                    await message.reply('❌ An error occurred while fetching AI statistics.');
+                    await message.reply('❌ Đã xảy ra lỗi khi lấy thống kê AI.');
                 }
             }
         });
@@ -193,7 +193,7 @@ export class CommandHandler {
         // AI test command
         this.registerCommand({
             name: 'ai-test',
-            description: 'Test AI response generation',
+            description: 'Kiểm tra tạo phản hồi AI',
             usage: '!ai-test',
             aliases: ['aitest'],
             execute: async (message: Message) => {
@@ -202,21 +202,21 @@ export class CommandHandler {
                     const aiManager = (message.client as any).aiManager;
                     
                     if (!aiManager) {
-                        await message.reply('❌ AI Manager not initialized. Please check the logs.');
+                        await message.reply('❌ AI Manager chưa được khởi tạo. Vui lòng kiểm tra logs.');
                         return;
                     }
 
-                    const reply = await message.reply('🧠 Testing AI response generation...');
+                    const reply = await message.reply('🧠 Đang kiểm tra tạo phản hồi AI...');
                     
                     try {
                         const testResponse = await aiManager.testAI();
-                        await reply.edit(`✅ AI Test Successful!\n\n**Response:** ${testResponse}`);
+                        await reply.edit(`✅ Kiểm tra AI thành công!\n\n**Phản hồi:** ${testResponse}`);
                     } catch (error) {
-                        await reply.edit(`❌ AI Test Failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                        await reply.edit(`❌ Kiểm tra AI thất bại: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
                     }
                 } catch (error) {
                     Logger.error('Error in ai-test command:', error);
-                    await message.reply('❌ An error occurred during AI testing.');
+                    await message.reply('❌ Đã xảy ra lỗi trong quá trình kiểm tra AI.');
                 }
             }
         });
@@ -224,7 +224,7 @@ export class CommandHandler {
         // Status command
         this.registerCommand({
             name: 'status',
-            description: 'Show bot status and information',
+            description: 'Hiển thị trạng thái và thông tin bot',
             usage: '!status',
             aliases: ['info'],
             execute: async (message: Message) => {
@@ -232,14 +232,14 @@ export class CommandHandler {
                 const uptimeString = this.formatUptime(uptime);
                 
                 const embed = {
-                    title: '🤖 Bot Status',
+                    title: '🤖 Trạng Thái Bot',
                     fields: [
-                        { name: '⏱️ Uptime', value: uptimeString, inline: true },
-                        { name: '📊 Memory Usage', value: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`, inline: true },
-                        { name: '🏷️ Version', value: 'v1.0.0-dev', inline: true },
-                        { name: '🧠 AI Status', value: (message.client as any).aiManager ? 'Integrated ✅' : 'Not integrated ❌', inline: true },
-                        { name: '🔊 TTS Status', value: (message.client as any).ttsManager ? 'Integrated ✅' : 'Not integrated ❌', inline: true },
-                        { name: '🗄️ Database Status', value: (message.client as any).databaseManager?.isReady() ? 'Connected ✅' : 'Not connected ❌', inline: true }
+                        { name: '⏱️ Thời gian hoạt động', value: uptimeString, inline: true },
+                        { name: '📊 Sử dụng bộ nhớ', value: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`, inline: true },
+                        { name: '🏷️ Phiên bản', value: 'v1.0.0-dev', inline: true },
+                        { name: '🧠 Trạng thái AI', value: (message.client as any).aiManager ? 'Đã tích hợp ✅' : 'Chưa tích hợp ❌', inline: true },
+                        { name: '🔊 Trạng thái TTS', value: (message.client as any).ttsManager ? 'Đã tích hợp ✅' : 'Chưa tích hợp ❌', inline: true },
+                        { name: '🗄️ Trạng thái Database', value: (message.client as any).databaseManager?.isReady() ? 'Đã kết nối ✅' : 'Chưa kết nối ❌', inline: true }
                     ],
                     color: 0x00AE86,
                     timestamp: new Date().toISOString()

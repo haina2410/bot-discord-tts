@@ -124,7 +124,7 @@ export default {
                 } catch (error) {
                     Logger.error('❌ Error processing AI response:', error);
                     // Send fallback response
-                    await message.reply("I'm having trouble thinking right now, but I'm here and listening! 🤖");
+                    await message.reply("Mình đang gặp chút khó khăn trong việc suy nghĩ, nhưng mình vẫn ở đây và đang lắng nghe! 🤖");
                 }
             } else {
                 Logger.warn('⚠️ AI Manager not initialized, cannot process AI response');

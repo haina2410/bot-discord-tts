@@ -1,5 +1,7 @@
-import { TTSService, TTSRequest, TTSResponse } from './ttsService.js';
-import { AudioManager, AudioFile } from './audioManager.js';
+import { TTSService } from './ttsService.js';
+import type { TTSRequest, TTSResponse } from './ttsService.js';
+import { AudioManager } from './audioManager.js';
+import type { AudioFile } from './audioManager.js';
 import { Logger } from '../utils/logger.js';
 
 export interface TTSResult {

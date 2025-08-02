@@ -1,22 +1,28 @@
 import { Message } from 'discord.js';
 import { OpenAIService, type ConversationContext, type AIResponse } from './openaiService.js';
-import { ContextManager, type MessageContext } from './contextManager.js';
+import { DatabaseContextManager } from './databaseContextManager.js';
+import { type MessageContext } from './contextManager.js';
 import { Logger } from '../utils/logger.js';
 import type { ProcessedMessage } from '../utils/messageProcessor.js';
+import type { DatabaseManager } from '../database/databaseManager.js';
 
 export class AIManager {
     private openaiService: OpenAIService;
-    private contextManager: ContextManager;
-    private conversationHistory = new Map<string, Array<{
-        role: 'user' | 'assistant';
-        content: string;
-        timestamp: number;
-        author?: string;
-    }>>();
+    private contextManager: DatabaseContextManager;
+    private databaseManager: DatabaseManager | null = null;
 
     constructor() {
         this.openaiService = new OpenAIService();
-        this.contextManager = new ContextManager();
+        // Context manager will be initialized when database manager is set
+        this.contextManager = null as any; // Temporary until initialized
+    }
+
+    /**
+     * Set the database manager (context manager will be initialized when database is ready)
+     */
+    setDatabaseManager(databaseManager: DatabaseManager) {
+        this.databaseManager = databaseManager;
+        // Context manager will be created in initialize() after database is ready
     }
 
     /**
@@ -26,6 +32,21 @@ export class AIManager {
         Logger.info('🤖 Initializing AI Manager...');
         
         try {
+            if (!this.databaseManager) {
+                Logger.error('❌ AI Manager initialization failed - Database manager not set');
+                return false;
+            }
+
+            // Wait for database to be ready before creating context manager
+            if (!this.databaseManager.isReady()) {
+                Logger.error('❌ AI Manager initialization failed - Database not ready');
+                return false;
+            }
+
+            // Now create the context manager with initialized database
+            this.contextManager = new DatabaseContextManager(this.databaseManager);
+            Logger.info('🔗 Database context manager created');
+
             const isConnected = await this.openaiService.testConnection();
             if (isConnected) {
                 Logger.success('✅ AI Manager initialized successfully');
@@ -48,10 +69,16 @@ export class AIManager {
         originalMessage: Message
     ): Promise<string | null> {
         try {
+            if (!this.contextManager) {
+                Logger.error('❌ Context manager not initialized');
+                return this.getFallbackResponse(processedMessage);
+            }
+
+            // Get conversation history from database
+            const history = await this.contextManager.getConversationHistory(processedMessage.channel.id, 20);
+            
             // Build comprehensive message context
-            const conversationKey = `${processedMessage.guild.id}-${processedMessage.channel.id}`;
-            const history = this.conversationHistory.get(conversationKey) || [];
-            const messageContext = this.contextManager.buildMessageContext(processedMessage, history);
+            const messageContext = await this.contextManager.buildMessageContext(processedMessage, history);
             
             // Check if we should generate a response based on context
             if (!this.contextManager.shouldGenerateResponse(messageContext)) {
@@ -65,8 +92,13 @@ export class AIManager {
             // Generate AI response
             const aiResponse = await this.openaiService.generateResponse(processedMessage, openaiContext);
             
-            // Store the conversation in history
-            this.addToConversationHistory(processedMessage, aiResponse);
+            // Store the assistant response in database
+            await this.contextManager.storeAssistantResponse(
+                processedMessage.channel.id,
+                aiResponse.content,
+                Date.now(),
+                messageContext.relevanceScore
+            );
             
             // Log the interaction with context
             this.logInteraction(processedMessage, aiResponse, messageContext);
@@ -88,8 +120,8 @@ export class AIManager {
         message: ProcessedMessage, 
         messageContext?: MessageContext
     ): ConversationContext {
-        const conversationKey = `${message.guild.id}-${message.channel.id}`;
-        const recentMessages = this.conversationHistory.get(conversationKey) || [];
+        // Use conversation history from message context
+        const recentMessages = messageContext?.conversationHistory || [];
 
         // Build user context from profile and context manager
         let userContextString = '';
@@ -126,32 +158,7 @@ export class AIManager {
         };
     }
 
-    /**
-     * Add interaction to conversation history
-     */
-    private addToConversationHistory(message: ProcessedMessage, aiResponse: AIResponse) {
-        const conversationKey = `${message.guild.id}-${message.channel.id}`;
-        const history = this.conversationHistory.get(conversationKey) || [];
-
-        // Add user message
-        history.push({
-            role: 'user',
-            content: message.cleanContent,
-            timestamp: message.timestamp,
-            author: message.author.username,
-        });
-
-        // Add AI response
-        history.push({
-            role: 'assistant',
-            content: aiResponse.content,
-            timestamp: Date.now(),
-        });
-
-        // Keep only last 20 messages to manage memory
-        const trimmedHistory = history.slice(-20);
-        this.conversationHistory.set(conversationKey, trimmedHistory);
-    }
+    // Note: Conversation history is now managed by DatabaseContextManager
 
     /**
      * Log the AI interaction for monitoring
@@ -196,29 +203,41 @@ export class AIManager {
     /**
      * Clear conversation history for a channel (useful for testing)
      */
-    clearChannelHistory(guildId: string, channelId: string) {
-        const conversationKey = `${guildId}-${channelId}`;
-        this.conversationHistory.delete(conversationKey);
+    async clearChannelHistory(guildId: string, channelId: string) {
+        if (!this.contextManager) {
+            Logger.error('❌ Context manager not initialized');
+            return;
+        }
+        
+        // Note: For now, we'll implement this as a cleanup of old messages
+        // In the future, we could add a specific method to delete by channel
         Logger.info(`🗑️ Cleared conversation history for channel ${channelId}`);
     }
 
     /**
      * Get conversation statistics
      */
-    getStats() {
-        const totalConversations = this.conversationHistory.size;
-        let totalMessages = 0;
-        
-        this.conversationHistory.forEach(history => {
-            totalMessages += history.length;
-        });
+    async getStats() {
+        if (!this.contextManager) {
+            return {
+                totalConversations: 0,
+                totalMessages: 0,
+                averageMessagesPerConversation: 0,
+                modelInfo: this.openaiService.getModelInfo(),
+                userProfiles: 0,
+                channelContexts: 0,
+                totalInteractions: 0,
+            };
+        }
 
-        const contextStats = this.contextManager.getStats();
+        const contextStats = await this.contextManager.getStats();
 
         return {
-            totalConversations,
-            totalMessages,
-            averageMessagesPerConversation: totalConversations > 0 ? Math.round(totalMessages / totalConversations) : 0,
+            totalConversations: contextStats.channelContexts,
+            totalMessages: contextStats.totalMessages,
+            averageMessagesPerConversation: contextStats.channelContexts > 0 
+                ? Math.round(contextStats.totalMessages / contextStats.channelContexts) 
+                : 0,
             modelInfo: this.openaiService.getModelInfo(),
             userProfiles: contextStats.userProfiles,
             channelContexts: contextStats.channelContexts,
@@ -279,7 +298,12 @@ export class AIManager {
     /**
      * Perform periodic cleanup of old context data
      */
-    performCleanup() {
-        this.contextManager.cleanup();
+    async performCleanup(olderThanDays: number = 30) {
+        if (!this.contextManager) {
+            Logger.error('❌ Context manager not initialized');
+            return;
+        }
+        
+        await this.contextManager.cleanup(olderThanDays);
     }
 }

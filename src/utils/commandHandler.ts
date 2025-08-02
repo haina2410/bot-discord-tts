@@ -2,6 +2,7 @@ import { Message } from 'discord.js';
 import { Logger } from './logger.js';
 import { MessageProcessor } from './messageProcessor.js';
 import { ttsTestCommand, aiTtsTestCommand } from '../commands/ttsTest.js';
+import { databaseTestCommand, databaseSchemaTestCommand } from '../commands/databaseTest.js';
 
 export interface Command {
     name: string;
@@ -238,7 +239,7 @@ export class CommandHandler {
                         { name: '🏷️ Version', value: 'v1.0.0-dev', inline: true },
                         { name: '🧠 AI Status', value: (message.client as any).aiManager ? 'Integrated ✅' : 'Not integrated ❌', inline: true },
                         { name: '🔊 TTS Status', value: (message.client as any).ttsManager ? 'Integrated ✅' : 'Not integrated ❌', inline: true },
-                        { name: '💾 Database Status', value: 'Not yet integrated', inline: true }
+                        { name: '🗄️ Database Status', value: (message.client as any).databaseManager?.isReady() ? 'Connected ✅' : 'Not connected ❌', inline: true }
                     ],
                     color: 0x00AE86,
                     timestamp: new Date().toISOString()
@@ -265,6 +266,26 @@ export class CommandHandler {
             usage: `!${aiTtsTestCommand.name}`,
             execute: async (message: Message, args: string[]) => {
                 await aiTtsTestCommand.execute(message);
+            }
+        });
+
+        // Database test command
+        this.registerCommand({
+            name: databaseTestCommand.name,
+            description: databaseTestCommand.description,
+            usage: `!${databaseTestCommand.name}`,
+            execute: async (message: Message, args: string[]) => {
+                await databaseTestCommand.execute(message);
+            }
+        });
+
+        // Database schema test command
+        this.registerCommand({
+            name: databaseSchemaTestCommand.name,
+            description: databaseSchemaTestCommand.description,
+            usage: `!${databaseSchemaTestCommand.name}`,
+            execute: async (message: Message, args: string[]) => {
+                await databaseSchemaTestCommand.execute(message);
             }
         });
 

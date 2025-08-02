@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, Collection } from 'discord.js';
-import dotenv from 'dotenv';
+import 'dotenv/config';
 import { config } from '../config/bot.js';
 import { loadEvents } from './utils/eventLoader.js';
 import { ChannelManager } from './utils/channelManager.js';
@@ -8,10 +8,8 @@ import { CommandHandler } from './utils/commandHandler.js';
 import { AIManager } from './ai/aiManager.js';
 import { TTSManager } from './tts/ttsManager.js';
 import { VoiceManager } from './utils/voiceManager.js';
-import { setChannelManager, setMessageProcessor, setCommandHandler, setAIManager, setTTSManager, setVoiceManager } from './events/messageCreate.js';
-
-// Load environment variables
-dotenv.config();
+import { DatabaseManager } from './database/databaseManager.js';
+import { setChannelManager, setMessageProcessor, setCommandHandler, setAIManager, setTTSManager, setVoiceManager, setDatabaseManager } from './events/messageCreate.js';
 
 // Create a new client instance with extended properties
 interface ExtendedClient extends Client {
@@ -43,8 +41,13 @@ setMessageProcessor(messageProcessor);
 const commandHandler = new CommandHandler(messageProcessor);
 setCommandHandler(commandHandler);
 
-// Initialize AI manager
+// Initialize database manager first
+const databaseManager = new DatabaseManager();
+setDatabaseManager(databaseManager);
+
+// Initialize AI manager with database dependency
 const aiManager = new AIManager();
+aiManager.setDatabaseManager(databaseManager);
 setAIManager(aiManager);
 
 // Initialize TTS manager
@@ -59,6 +62,7 @@ setVoiceManager(voiceManager);
 (client as any).aiManager = aiManager;
 (client as any).ttsManager = ttsManager;
 (client as any).voiceManager = voiceManager;
+(client as any).databaseManager = databaseManager;
 
 // Load event handlers
 loadEvents(client);

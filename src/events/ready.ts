@@ -67,6 +67,30 @@ export default {
             Logger.warn('⚠️ TTS Manager not found on client');
         }
 
+        // Initialize Database Manager
+        const databaseManager = (client as any).databaseManager;
+        if (databaseManager) {
+            Logger.info('🗄️ Initializing Database Manager...');
+            try {
+                const dbInitialized = await databaseManager.initialize();
+                if (dbInitialized) {
+                    Logger.success('✅ Database Manager initialized successfully');
+                    
+                    // Log database statistics
+                    const dbStats = databaseManager.getStats();
+                    if (dbStats) {
+                        Logger.info(`📊 Database: ${dbStats.sizeMB}MB, ${dbStats.tables} tables, ${dbStats.journalMode} mode`);
+                    }
+                } else {
+                    Logger.error('❌ Database Manager initialization failed');
+                }
+            } catch (error) {
+                Logger.error('❌ Error initializing Database Manager:', error);
+            }
+        } else {
+            Logger.warn('⚠️ Database Manager not found on client');
+        }
+
         Logger.success('🎯 Bot is now listening for messages and learning...');
         Logger.info('💡 Send "!test" in your configured channel to verify functionality');
         Logger.info('🧠 Send "!ai-test" to test AI response generation');

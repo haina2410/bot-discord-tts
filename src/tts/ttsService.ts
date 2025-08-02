@@ -1,4 +1,5 @@
-import axios, { AxiosResponse } from 'axios';
+import axios from 'axios';
+import type { AxiosResponse } from 'axios';
 import { config } from '../../config/bot.js';
 import { Logger } from '../utils/logger.js';
 

@@ -1,27 +1,27 @@
 {
   "name": "bot-discord",
-  "module": "src/index.ts",
+  "main": "src/index.ts",
   "scripts": {
-    "start": "bun run src/index.ts",
-    "dev": "bun run --watch src/index.ts",
-    "build": "bun build src/index.ts --outdir dist",
-    "test": "bun test",
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc --build",
+    "test": "tsx --test src/**/*.test.ts",
     "start:prod": "./scripts/start.sh",
     "health": "./scripts/health-check.sh",
     "docker:build": "docker build -t discord-ai-chatbot .",
     "docker:run": "docker-compose up -d",
     "docker:stop": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
-    "type-check": "bun run tsc --noEmit"
+    "type-check": "tsc --noEmit"
   },
+  "packageManager": "pnpm@10.14.0",
   "type": "module",
   "private": true,
   "devDependencies": {
-    "@types/bun": "latest",
-    "@types/node": "^24.1.0"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^24.1.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "@discordjs/opus": "^0.10.0",
@@ -31,7 +31,6 @@
     "discord.js": "^14.21.0",
     "dotenv": "^17.2.1",
     "libsodium-wrappers": "^0.7.15",
-    "openai": "^5.11.0",
-    "sqlite3": "^5.1.7"
+    "openai": "^5.11.0"
   }
 }

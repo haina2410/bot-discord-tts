@@ -37,24 +37,32 @@ echo "📁 Creating necessary directories..."
 mkdir -p data
 mkdir -p logs
 
-# Check if Bun is installed
-if ! command -v bun &> /dev/null; then
-    echo "❌ Error: Bun is not installed!"
-    echo "Please install Bun from https://bun.sh/"
+# Check if Node.js is installed
+if ! command -v node &> /dev/null; then
+    echo "❌ Error: Node.js is not installed!"
+    echo "Please install Node.js from https://nodejs.org/"
     exit 1
 fi
 
-echo "✅ Bun found: $(bun --version)"
+# Check if pnpm is installed
+if ! command -v pnpm &> /dev/null; then
+    echo "❌ Error: pnpm is not installed!"
+    echo "Please install pnpm: npm install -g pnpm"
+    exit 1
+fi
+
+echo "✅ Node.js found: $(node --version)"
+echo "✅ pnpm found: $(pnpm --version)"
 
 # Install dependencies if node_modules doesn't exist
 if [ ! -d "node_modules" ]; then
     echo "📦 Installing dependencies..."
-    bun install
+    pnpm install
 fi
 
 # Run type check
 echo "🔍 Running type check..."
-bun run tsc --noEmit
+pnpm run type-check
 
 if [ $? -ne 0 ]; then
     echo "❌ Type check failed! Please fix TypeScript errors."
@@ -69,4 +77,4 @@ echo "Press Ctrl+C to stop the bot"
 echo "----------------------------------------"
 
 # Use exec to replace the shell process with the bot process
-exec bun run src/index.ts
+exec pnpm start

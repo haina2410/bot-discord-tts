@@ -6,6 +6,7 @@ import { CommandHandler } from '../utils/commandHandler.js';
 import { AIManager } from '../ai/aiManager.js';
 import { TTSManager } from '../tts/ttsManager.js';
 import { VoiceManager } from '../utils/voiceManager.js';
+import { DatabaseManager } from '../database/databaseManager.js';
 
 // Global instances (will be set by main bot)
 let channelManager: ChannelManager;
@@ -14,6 +15,7 @@ let commandHandler: CommandHandler;
 let aiManager: AIManager;
 let ttsManager: TTSManager;
 let voiceManager: VoiceManager;
+let databaseManager: DatabaseManager;
 
 export function setChannelManager(manager: ChannelManager) {
     channelManager = manager;
@@ -37,6 +39,10 @@ export function setTTSManager(manager: TTSManager) {
 
 export function setVoiceManager(manager: VoiceManager) {
     voiceManager = manager;
+}
+
+export function setDatabaseManager(manager: DatabaseManager) {
+    databaseManager = manager;
 }
 
 export default {

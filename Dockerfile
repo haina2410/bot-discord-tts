@@ -1,26 +1,28 @@
-# Use the official Bun image
-FROM oven/bun:1.2.12-slim
-
-# Set working directory
+FROM node:22-slim AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+COPY . /app
 WORKDIR /app
 
-# Copy package files
-COPY package.json bun.lock* ./
+FROM base AS prod-deps
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
 
-# Install dependencies
-RUN bun install --frozen-lockfile --production
+FROM base AS build
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+# Install tsx globally and run type check during build
+RUN pnpm add -g tsx
+RUN pnpm run type-check
 
-# Copy source code
-COPY . .
+FROM base
+COPY --from=prod-deps /app/node_modules /app/node_modules
+COPY --from=build /app/dist /app/dist
 
 # Create necessary directories
 RUN mkdir -p data logs
 
 # Make scripts executable
 RUN chmod +x scripts/*.sh
-
-# Run type check during build
-RUN bun run tsc --noEmit
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 botuser
@@ -36,4 +38,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 EXPOSE 3000
 
 # Start the bot
-CMD ["bun", "run", "src/index.ts"]
+CMD ["pnpm", "start"]

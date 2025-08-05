@@ -19,7 +19,7 @@ import {
 } from "@discordjs/voice";
 import { createReadStream } from "fs";
 import { Logger } from "./logger.js";
-import { config } from "../../config/bot.js";
+import { config } from "../config/bot.js";
 
 export interface VoicePlaybackResult {
   success: boolean;

@@ -13,7 +13,17 @@
     "docker:run": "docker-compose up -d",
     "docker:stop": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
-    "type-check": "tsc --project tsconfig.typecheck.json"
+    "type-check": "tsc --project tsconfig.typecheck.json",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:start:prod": "pm2 start ecosystem.config.js --env production",
+    "pm2:stop": "pm2 stop discord-ai-chatbot",
+    "pm2:restart": "pm2 restart discord-ai-chatbot",
+    "pm2:reload": "pm2 reload discord-ai-chatbot",
+    "pm2:delete": "pm2 delete discord-ai-chatbot",
+    "pm2:logs": "pm2 logs discord-ai-chatbot",
+    "pm2:monit": "pm2 monit",
+    "pm2:status": "pm2 status",
+    "deploy": "pnpm run build && pnpm run pm2:start:prod"
   },
   "packageManager": "pnpm@10.14.0",
   "type": "module",
@@ -21,6 +31,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^24.1.0",
+    "pm2": "^5.4.2",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   },

@@ -66,7 +66,8 @@ export class AIManager {
      */
     async processMessage(
         processedMessage: ProcessedMessage,
-        originalMessage: Message
+        originalMessage: Message,
+        relevanceThreshold?: number
     ): Promise<string | null> {
         try {
             if (!this.contextManager) {
@@ -81,8 +82,9 @@ export class AIManager {
             const messageContext = await this.contextManager.buildMessageContext(processedMessage, history);
             
             // Check if we should generate a response based on context
-            if (!this.contextManager.shouldGenerateResponse(messageContext)) {
-                Logger.info(`🤔 Message relevance too low (${Math.round(messageContext.relevanceScore * 100)}%), skipping AI response`);
+            const threshold = relevanceThreshold ?? 0.6;
+            if (!this.contextManager.shouldGenerateResponse(messageContext, threshold)) {
+                Logger.info(`🤔 Message relevance too low (${Math.round(messageContext.relevanceScore * 100)}% < ${Math.round(threshold * 100)}%), skipping AI response`);
                 return null;
             }
             

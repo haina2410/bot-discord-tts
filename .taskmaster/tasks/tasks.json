@@ -329,7 +329,7 @@
               "5.2",
               "5.4"
             ],
-            "details": "Add error handling for connection issues and log events for monitoring.\n<info added on 2025-08-02T02:16:11.887Z>\nThis subtask has been marked as complete, with comprehensive error handling and logging already implemented in Task 4. The implementation includes multiple layers of error handling for various failure scenarios and detailed logging for monitoring, debugging, and performance tracking. Specific error handling covers TTS service errors, voice channel errors, audio playback errors, and integration errors. Logging implementation includes performance monitoring, status tracking, error reporting, and user feedback. Evidence of completion includes the use of a `Logger` utility, try-catch blocks, graceful degradation, and comprehensive test commands. Integration includes error handling in the `messageCreate.ts` event handler and non-blocking error handling to maintain bot functionality.\n</info added on 2025-08-02T02:16:11.887Z>",
+            "details": "Add error handling for connection issues and log events for monitoring.\n<info added on 2025-08-02T02:16:11.887Z>\nThis subtask has been marked as complete, with comprehensive error handling and logging already implemented in Task 4. The implementation includes multiple layers of error handling for various failure scenarios and detailed logging for monitoring, debugging, and performance tracking. Specific error handling covers TTS service errors, voice channel errors, audio playback errors, and integration errors. Logging implementation includes performance monitoring, status tracking, error reporting, and user feedback. Evidence of completion includes the use of a `Logger` utility, try-catch blocks, graceful degradation, and comprehensive test commands. Integration includes error handling in the `messageCreate.ts` event handler and non-blocking error handling to maintain bot functionality.\n</info added on 2025-08-02T02:16:11.887Z>\n<info added on 2025-08-05T06:26:43.874Z>\nFixed critical voice channel connection issue that was causing AbortError timeouts:\n\nRoot Cause Analysis:\n- Using incorrect state constant 'Ready' instead of VoiceConnectionStatus.Ready\n- 10-second timeout was too short for voice connections\n- Lack of proper error handling for connection timeouts\n- No cleanup of failed connections\n\nSolutions Implemented:\n\n1. Fixed State Constants:\n   - Imported VoiceConnectionStatus from @discordjs/voice\n   - Changed entersState(connection, 'Ready', 10000) to entersState(connection, VoiceConnectionStatus.Ready, 30000)\n\n2. Improved Timeout Handling:\n   - Increased timeout from 10 seconds to 30 seconds\n   - Added proper try-catch around entersState to handle timeouts gracefully\n   - Connection is properly destroyed and cleaned up on timeout\n\n3. Enhanced Connection Management:\n   - Added connection state checking before reusing existing connections\n   - Destroy and recreate connections that are in bad states\n   - Better cleanup of failed connections from the connections Map\n\n4. Added Connection Options:\n   - Set selfDeaf: false and selfMute: false for better voice channel behavior\n   - Added comprehensive state change event handlers\n\n5. Improved Error Handling:\n   - Better error messages for timeout scenarios in Vietnamese\n   - Added dependency checking to ensure @discordjs/opus and libsodium-wrappers are available\n   - More specific error handling for AbortError cases\n\n6. Enhanced State Management:\n   - Updated isConnected() method to use proper VoiceConnectionStatus constants\n   - Better handling of Disconnected and Destroyed states\n\nTesting Results:\n- Voice connection timeout errors should be resolved\n- Better user feedback for connection issues\n- Proper cleanup prevents connection state corruption\n- Dependencies are checked before attempting connections\n\nThe bot should now successfully join voice channels without the AbortError timeout issues.\n</info added on 2025-08-05T06:26:43.874Z>",
             "status": "done",
             "testStrategy": "Test error scenarios and verify that errors are logged and handled gracefully."
           }
@@ -430,7 +430,7 @@
             "dependencies": [
               "7.1"
             ],
-            "details": "Ensure that the AI response generation can utilize user data to provide contextful interactions.",
+            "details": "Ensure that the AI response generation can utilize user data to provide contextful interactions.\n<info added on 2025-08-05T06:34:12.503Z>\nFixed the \"Context manager not initialized\" error by correcting the initialization order in the ready event. The AI Manager was being initialized before the Database Manager, which caused the contextManager to remain null. The solution involved reordering the initialization sequence in `src/events/ready.ts` to ensure the Database Manager initializes first, followed by the AI Manager, and finally the TTS Manager. This change allows the AI Manager to create its DatabaseContextManager successfully, ensuring the context manager is properly initialized for message processing. The code changes included modifying the initialization order and adding comments to explain the dependency relationship. This fix is expected to resolve the context manager error, allowing AI responses to include full database context and manage user profiles and conversation history effectively.\n</info added on 2025-08-05T06:34:12.503Z>",
             "status": "pending",
             "testStrategy": "Test the integration by checking if the AI responses are enriched with user-specific data."
           },
@@ -538,11 +538,79 @@
             "testStrategy": "Test alert system by simulating failures and ensuring notifications are received."
           }
         ]
+      },
+      {
+        "id": 9,
+        "title": "Implement Discord Command for Bot to Join User's Voice Channel",
+        "description": "Develop a Discord command that allows the bot to join the voice channel the user is currently in, with error handling and user feedback.",
+        "details": "To implement this feature, use the discord.js library to create a command handler for a new command, such as '!join' or '!voice'. The command should first check if the user issuing the command is currently in a voice channel. If the user is in a voice channel, use the VoiceManager to make the bot join that specific channel. If the user is not in a voice channel, send an error message back to the user indicating that they need to be in a voice channel for the command to work. Ensure that the bot prioritizes joining the user's voice channel over any default channel settings. Implement robust error handling to manage potential issues such as permission errors or connection failures, and provide clear feedback to the user in each case. Consider using async/await for handling asynchronous operations and ensure that the bot's permissions are correctly set to allow joining voice channels.\n<info added on 2025-08-02T08:12:40.451Z>\nImplementation completed successfully with the following features:\n\n1. Created `joinVoice.ts` command file with two commands:\n   - `!join` (aliases: `voice`, `thamgia`) for the bot to join the user's voice channel.\n   - `!leave` (aliases: `disconnect`, `roi`) for the bot to leave the current voice channel.\n\n2. User voice channel detection using `VoiceManager.getUserVoiceChannel()` to identify the user's current voice channel.\n\n3. Integrated `VoiceManager.joinVoiceChannel()` to join the user's specific channel, prioritizing it over any default settings.\n\n4. Comprehensive error handling with Vietnamese user messages:\n   - Provides a message if the user is not in a voice channel.\n   - Confirms if the bot is already in the same channel.\n   - Specific messages for permission errors related to Connect/Speak.\n   - User-friendly messages for connection timeouts and other errors.\n\n5. Real-time user feedback on joining progress and success/failure states.\n\n6. Proper registration of both commands in `CommandHandler` with aliases.\n\nKey features include prioritizing the user's voice channel, clear Vietnamese error messages, handling of edge cases, and both join and leave functionalities using existing `VoiceManager` infrastructure.\n\nCommands available:\n- `!join`, `!voice`, `!thamgia` for joining the user's voice channel.\n- `!leave`, `!disconnect`, `!roi` for leaving the voice channel.\n\nThe bot now effectively detects and joins the user's voice channel, enhancing TTS functionality.\n</info added on 2025-08-02T08:12:40.451Z>",
+        "testStrategy": "1. Deploy the bot to a test server and ensure it is online and responsive.\n2. Test the command by having a user in a voice channel issue the '!join' command and verify that the bot joins the correct channel.\n3. Test the command when the user is not in a voice channel and verify that an appropriate error message is sent.\n4. Simulate permission errors and verify that the bot handles these gracefully, providing feedback to the user.\n5. Test edge cases such as multiple users issuing the command simultaneously and ensure the bot responds correctly.",
+        "status": "done",
+        "dependencies": [
+          1,
+          5
+        ],
+        "priority": "high",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set Up Command Handler",
+            "description": "Create a command handler for the new '!join' command using discord.js.",
+            "dependencies": [],
+            "details": "Implement a command handler that listens for the '!join' command and initiates the process of joining a voice channel.",
+            "status": "done",
+            "testStrategy": "Verify that the command handler correctly recognizes the '!join' command and triggers the appropriate function."
+          },
+          {
+            "id": 2,
+            "title": "Check User's Voice Channel Status",
+            "description": "Implement logic to check if the user issuing the command is in a voice channel.",
+            "dependencies": [
+              "9.1"
+            ],
+            "details": "Use discord.js to determine if the user is currently in a voice channel and handle cases where they are not.",
+            "status": "done",
+            "testStrategy": "Test with users in and out of voice channels to ensure correct detection and error messaging."
+          },
+          {
+            "id": 3,
+            "title": "Join User's Voice Channel",
+            "description": "Use VoiceManager to make the bot join the user's voice channel.",
+            "dependencies": [
+              "9.2"
+            ],
+            "details": "Implement the functionality for the bot to join the detected voice channel using discord.js VoiceManager.",
+            "status": "done",
+            "testStrategy": "Ensure the bot joins the correct voice channel when the command is issued by a user in a voice channel."
+          },
+          {
+            "id": 4,
+            "title": "Implement Error Handling",
+            "description": "Develop robust error handling for permission issues and connection failures.",
+            "dependencies": [
+              "9.3"
+            ],
+            "details": "Handle potential errors such as permission denials or connection issues and provide user feedback.",
+            "status": "done",
+            "testStrategy": "Simulate errors like permission issues and verify that appropriate error messages are sent to the user."
+          },
+          {
+            "id": 5,
+            "title": "Provide User Feedback",
+            "description": "Ensure clear feedback is provided to the user for all command outcomes.",
+            "dependencies": [
+              "9.4"
+            ],
+            "details": "Implement user feedback messages for successful joins, errors, and when the user is not in a voice channel.",
+            "status": "done",
+            "testStrategy": "Test all possible command outcomes to ensure users receive clear and accurate feedback."
+          }
+        ]
       }
     ],
     "metadata": {
       "created": "2025-08-01T18:40:15.716Z",
-      "updated": "2025-08-02T06:18:27.753Z",
+      "updated": "2025-08-02T08:13:12.161Z",
       "description": "Tasks for master context"
     }
   }

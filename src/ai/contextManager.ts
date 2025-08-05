@@ -386,14 +386,14 @@ export class ContextManager {
     /**
      * Check if response should be generated based on relevance
      */
-    shouldGenerateResponse(context: MessageContext): boolean {
+    shouldGenerateResponse(context: MessageContext, threshold: number = 0.6): boolean {
         // Always respond to mentions and direct replies
         if (context.message.messageType === 'mention' || context.message.isReply) {
             return true;
         }
         
-        // Respond based on relevance score
-        return context.relevanceScore > 0.6;
+        // Respond based on relevance score and provided threshold
+        return context.relevanceScore > threshold;
     }
 
     /**

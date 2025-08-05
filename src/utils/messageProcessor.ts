@@ -1,6 +1,11 @@
 import { Message, User } from 'discord.js';
 import { Logger } from './logger.js';
 
+export interface ListeningMode {
+    mode: 'mentions-only' | 'smart-listening' | 'always-listen' | 'disabled';
+    threshold?: number; // Relevance threshold for smart-listening mode (0.0 - 1.0)
+}
+
 export interface ProcessedMessage {
     id: string;
     content: string;
@@ -41,6 +46,11 @@ export interface ProcessedMessage {
 export class MessageProcessor {
     private commandPrefixes = ['!', '/', '$', '?'];
     private botUserId?: string;
+    private channelListeningModes: Map<string, ListeningMode> = new Map();
+    private defaultListeningMode: ListeningMode = { 
+        mode: 'smart-listening', 
+        threshold: 0.6 
+    };
 
     constructor(botUserId?: string) {
         this.botUserId = botUserId;
@@ -155,10 +165,35 @@ export class MessageProcessor {
     }
 
     /**
-     * Check if message should trigger AI response
+     * Set listening mode for a specific channel
+     */
+    setChannelListeningMode(channelId: string, mode: ListeningMode): void {
+        this.channelListeningModes.set(channelId, mode);
+        Logger.info(`🔧 Set listening mode for channel ${channelId}: ${mode.mode}${mode.threshold ? ` (threshold: ${mode.threshold})` : ''}`);
+    }
+
+    /**
+     * Get listening mode for a specific channel
+     */
+    getChannelListeningMode(channelId: string): ListeningMode {
+        return this.channelListeningModes.get(channelId) || this.defaultListeningMode;
+    }
+
+    /**
+     * Set default listening mode for all channels
+     */
+    setDefaultListeningMode(mode: ListeningMode): void {
+        this.defaultListeningMode = mode;
+        Logger.info(`🔧 Set default listening mode: ${mode.mode}${mode.threshold ? ` (threshold: ${mode.threshold})` : ''}`);
+    }
+
+    /**
+     * Check if message should trigger AI response based on listening mode
      */
     shouldTriggerAI(processedMessage: ProcessedMessage): boolean {
-        // Always respond to mentions and replies
+        const listeningMode = this.getChannelListeningMode(processedMessage.channel.id);
+
+        // Always respond to mentions and replies regardless of mode
         if (processedMessage.messageType === 'mention') {
             return true;
         }
@@ -168,12 +203,25 @@ export class MessageProcessor {
             return false;
         }
 
-        // For regular messages, we might want to respond based on:
-        // - Channel configuration
-        // - Message content analysis
-        // - User interaction history
-        // For now, let's be conservative and only respond to mentions
-        return false;
+        // Check listening mode for regular messages
+        switch (listeningMode.mode) {
+            case 'disabled':
+                return false;
+            
+            case 'mentions-only':
+                return false; // Only mentions trigger responses
+            
+            case 'always-listen':
+                return processedMessage.messageType === 'regular';
+            
+            case 'smart-listening':
+                // Let the AI context manager decide based on relevance
+                // The threshold will be used by the context manager
+                return processedMessage.messageType === 'regular';
+            
+            default:
+                return false;
+        }
     }
 
     /**

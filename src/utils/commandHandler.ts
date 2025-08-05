@@ -3,6 +3,8 @@ import { Logger } from './logger.js';
 import { MessageProcessor } from './messageProcessor.js';
 import { ttsTestCommand, aiTtsTestCommand } from '../commands/ttsTest.js';
 import { databaseTestCommand, databaseSchemaTestCommand } from '../commands/databaseTest.js';
+import listeningModeCommand, { setMessageProcessor as setListeningCommandMessageProcessor } from '../commands/listeningMode.js';
+import { joinVoiceCommand, leaveVoiceCommand } from '../commands/joinVoice.js';
 
 export interface Command {
     name: string;
@@ -18,6 +20,10 @@ export class CommandHandler {
 
     constructor(messageProcessor: MessageProcessor) {
         this.messageProcessor = messageProcessor;
+        
+        // Set message processor for listening command
+        setListeningCommandMessageProcessor(messageProcessor);
+        
         this.registerDefaultCommands();
     }
 
@@ -162,20 +168,25 @@ export class CommandHandler {
                         return;
                     }
 
-                    const stats = aiManager.getStats();
+                    const stats = await aiManager.getStats();
+                    
+                    if (!stats) {
+                        await message.reply('❌ Không thể lấy thống kê AI. Hệ thống có thể chưa khởi tạo hoàn toàn.');
+                        return;
+                    }
                     
                     const embed = {
                         title: '🧠 Thống Kê Hệ Thống AI',
                         fields: [
-                            { name: '💬 Cuộc trò chuyện', value: stats.totalConversations.toString(), inline: true },
-                            { name: '📝 Tổng tin nhắn', value: stats.totalMessages.toString(), inline: true },
-                            { name: '📊 TB tin nhắn/cuộc trò chuyện', value: stats.averageMessagesPerConversation.toString(), inline: true },
-                            { name: '👥 Hồ sơ người dùng', value: stats.userProfiles.toString(), inline: true },
-                            { name: '📺 Ngữ cảnh kênh', value: stats.channelContexts.toString(), inline: true },
-                            { name: '🔄 Tổng tương tác', value: stats.totalInteractions.toString(), inline: true },
-                            { name: '🤖 Mô hình AI', value: stats.modelInfo.model, inline: true },
-                            { name: '🎛️ Temperature', value: stats.modelInfo.temperature.toString(), inline: true },
-                            { name: '📏 Max Tokens', value: stats.modelInfo.maxTokens.toString(), inline: true },
+                            { name: '💬 Cuộc trò chuyện', value: (stats.totalConversations || 0).toString(), inline: true },
+                            { name: '📝 Tổng tin nhắn', value: (stats.totalMessages || 0).toString(), inline: true },
+                            { name: '📊 TB tin nhắn/cuộc trò chuyện', value: (stats.averageMessagesPerConversation || 0).toString(), inline: true },
+                            { name: '👥 Hồ sơ người dùng', value: (stats.userProfiles || 0).toString(), inline: true },
+                            { name: '📺 Ngữ cảnh kênh', value: (stats.channelContexts || 0).toString(), inline: true },
+                            { name: '🔄 Tổng tương tác', value: (stats.totalInteractions || 0).toString(), inline: true },
+                            { name: '🤖 Mô hình AI', value: stats.modelInfo?.model || 'Không xác định', inline: true },
+                            { name: '🎛️ Temperature', value: (stats.modelInfo?.temperature || 0).toString(), inline: true },
+                            { name: '📏 Max Tokens', value: (stats.modelInfo?.maxTokens || 0).toString(), inline: true },
                         ],
                         color: 0x00AE86,
                         timestamp: new Date().toISOString(),
@@ -286,6 +297,39 @@ export class CommandHandler {
             usage: `!${databaseSchemaTestCommand.name}`,
             execute: async (message: Message, args: string[]) => {
                 await databaseSchemaTestCommand.execute(message);
+            }
+        });
+
+        // Listening mode command
+        this.registerCommand({
+            name: listeningModeCommand.name,
+            description: listeningModeCommand.description,
+            usage: listeningModeCommand.usage,
+            aliases: listeningModeCommand.aliases,
+            execute: async (message: Message, args: string[]) => {
+                await listeningModeCommand.execute(message, args);
+            }
+        });
+
+        // Join voice command
+        this.registerCommand({
+            name: joinVoiceCommand.name,
+            description: joinVoiceCommand.description,
+            usage: joinVoiceCommand.usage,
+            aliases: joinVoiceCommand.aliases,
+            execute: async (message: Message, args: string[]) => {
+                await joinVoiceCommand.execute(message);
+            }
+        });
+
+        // Leave voice command
+        this.registerCommand({
+            name: leaveVoiceCommand.name,
+            description: leaveVoiceCommand.description,
+            usage: leaveVoiceCommand.usage,
+            aliases: leaveVoiceCommand.aliases,
+            execute: async (message: Message, args: string[]) => {
+                await leaveVoiceCommand.execute(message);
             }
         });
 

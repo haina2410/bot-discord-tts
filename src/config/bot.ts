@@ -15,7 +15,7 @@ export const config = {
   viettelTtsUrl: "https://viettelai.vn/tts/speech_synthesis",
 
   // Database Configuration
-  databasePath: process.env.DATABASE_PATH || "./data/bot.db",
+  databaseUrl: process.env.DATABASE_URL!,
 
   // Bot Behavior
   ttsVoice: "hn-thanhtung",

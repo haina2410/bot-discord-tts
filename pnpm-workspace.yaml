@@ -1,4 +1,4 @@
 onlyBuiltDependencies:
   - '@discordjs/opus'
-  - better-sqlite3
+  - pg
   - esbuild

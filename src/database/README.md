@@ -2,7 +2,7 @@
 
 ## Overview
 
-This database schema is designed to store and manage user profiles and channel contexts for a Discord bot with AI capabilities. The schema uses SQLite with `better-sqlite3` for optimal performance with the Bun runtime.
+This database schema is designed to store and manage user profiles and channel contexts for a Discord bot with AI capabilities. The schema uses PostgreSQL for remote database hosting.
 
 ## Design Principles
 
@@ -193,12 +193,12 @@ interface ChannelContext {
 
 ### Testing
 
-- Use in-memory SQLite (`:memory:`) for unit tests
+- Use a dedicated PostgreSQL schema for unit tests
 - Seed test data for consistent development environment
 - Validate schema migrations with test data
 
 ### Backup Strategy
 
-- SQLite file-based backup (simple file copy)
+- Use `pg_dump` for backups
 - Export to SQL format for cross-platform compatibility
 - Regular automated backups in production environment

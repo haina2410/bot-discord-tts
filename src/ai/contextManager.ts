@@ -13,6 +13,10 @@ export interface UserProfile {
   preferredResponseStyle?: "casual" | "formal" | "friendly" | "technical";
   timezone?: string;
   language?: string;
+  bio?: string;
+  goals?: string;
+  preferences?: string;
+  notes?: string;
 }
 
 export interface ChannelContext {
@@ -25,10 +29,20 @@ export interface ChannelContext {
   lastActivity: number;
 }
 
+export interface ServerContext {
+  serverId: string;
+  serverName: string;
+  ownerId?: string;
+  memberCount?: number;
+  recentEvents: string[];
+  lastActivity: number;
+}
+
 export interface MessageContext {
   message: ProcessedMessage;
   userProfile?: UserProfile;
   channelContext: ChannelContext;
+  serverContext?: ServerContext;
   conversationHistory: Array<{
     role: "user" | "assistant";
     content: string;
@@ -43,6 +57,7 @@ export interface MessageContext {
 export class ContextManager {
   private userProfiles = new Map<string, UserProfile>();
   private channelContexts = new Map<string, ChannelContext>();
+  private serverContexts = new Map<string, ServerContext>();
 
   /**
    * Build comprehensive context for AI response generation
@@ -64,6 +79,9 @@ export class ContextManager {
       message.channel.id,
       message.channel.name
     );
+    const serverContext = message.guild.id
+      ? this.getServerContext(message.guild.id, message.guild.name || "Unknown")
+      : undefined;
 
     // Extract topics from recent conversation
     const recentTopics = this.extractTopics(conversationHistory);
@@ -84,11 +102,15 @@ export class ContextManager {
     // Update profiles with new information
     this.updateUserProfile(userProfile, message);
     this.updateChannelContext(channelContext, message);
+    if (serverContext) {
+      this.updateServerContext(serverContext, message);
+    }
 
     return {
       message,
       userProfile,
       channelContext,
+      serverContext,
       conversationHistory: conversationHistory.map((msg) => ({
         ...msg,
         topics: this.extractTopicsFromMessage(msg.content),
@@ -113,6 +135,10 @@ export class ContextManager {
         recentTopics: [],
         interactionCount: 0,
         lastSeen: Date.now(),
+        bio: undefined,
+        goals: undefined,
+        preferences: undefined,
+        notes: undefined,
       };
       this.userProfiles.set(userId, profile);
       Logger.debug(`📝 Created new user profile for ${username}`);
@@ -621,6 +647,42 @@ export class ContextManager {
   }
 
   /**
+   * Get or create server context
+   */
+  private getServerContext(
+    serverId: string,
+    serverName: string
+  ): ServerContext {
+    let context = this.serverContexts.get(serverId);
+
+    if (!context) {
+      context = {
+        serverId,
+        serverName,
+        recentEvents: [],
+        lastActivity: Date.now(),
+      };
+      this.serverContexts.set(serverId, context);
+      Logger.debug(`🏠 Created new server context for ${serverName}`);
+    }
+
+    return context;
+  }
+
+  /**
+   * Update server context with new message data
+   */
+  private updateServerContext(
+    context: ServerContext,
+    message: ProcessedMessage
+  ) {
+    context.lastActivity = message.timestamp;
+    const event = `msg:${message.author.username}`;
+    context.recentEvents.unshift(event);
+    context.recentEvents = context.recentEvents.slice(0, 20);
+  }
+
+  /**
    * Get context summary for AI prompt
    */
   getContextSummary(context: MessageContext): string {
@@ -645,6 +707,11 @@ export class ContextManager {
     if (context.channelContext.recentTopics.length > 0) {
       const topics = context.channelContext.recentTopics.slice(-3).join(", ");
       parts.push(`Channel topics: ${topics}`);
+    }
+
+    if (context.serverContext && context.serverContext.recentEvents.length > 0) {
+      const events = context.serverContext.recentEvents.slice(0, 3).join(", ");
+      parts.push(`Server events: ${events}`);
     }
 
     if (context.contextualCues.length > 0) {
@@ -707,8 +774,14 @@ export class ContextManager {
       }
     }
 
+    for (const [serverId, context] of this.serverContexts.entries()) {
+      if (context.lastActivity < oneWeekAgo) {
+        this.serverContexts.delete(serverId);
+      }
+    }
+
     Logger.info(
-      `🧹 Context cleanup completed. ${this.userProfiles.size} users, ${this.channelContexts.size} channels`
+      `🧹 Context cleanup completed. ${this.userProfiles.size} users, ${this.channelContexts.size} channels, ${this.serverContexts.size} servers`
     );
   }
 }

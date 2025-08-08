@@ -7,6 +7,7 @@ import { AIManager } from "../ai/aiManager.js";
 import { TTSManager } from "../tts/ttsManager.js";
 import { VoiceManager } from "../utils/voiceManager.js";
 import { DatabaseManager } from "../database/databaseManager.js";
+import { DatabaseCRUD } from "../database/operations.js";
 
 // Global instances (will be set by main bot)
 let channelManager: ChannelManager;
@@ -74,6 +75,20 @@ export default {
       channelInfo
     );
     messageProcessor.logMessage(processedMessage);
+
+    // Record server event
+    if (databaseManager?.isReady() && message.guild) {
+      try {
+        const crud = new DatabaseCRUD(databaseManager.getDatabase());
+        await crud.addServerRecentEvent(
+          message.guild.id,
+          "message",
+          message.author.id
+        );
+      } catch (err) {
+        Logger.debug("Failed to log server event", err);
+      }
+    }
 
     // Handle commands
     if (processedMessage.messageType === "command" && commandHandler) {

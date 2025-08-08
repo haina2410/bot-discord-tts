@@ -73,17 +73,17 @@ export async function execute(
     }
 
     // Split long messages if needed
-    if (result.length > 2000) {
-      const chunks = result.match(/.{1,2000}/g) || [result];
-      await interaction.editReply(chunks[0]);
-      for (let i = 1; i < chunks.length; i++) {
-        if (chunks[i]) {
-          await interaction.followUp(chunks[i]);
+      if (result.length > 2000) {
+        const chunks = result.match(/.{1,2000}/g) || [result];
+        await interaction.editReply(chunks[0]);
+        for (let i = 1; i < chunks.length; i++) {
+          if (chunks[i]) {
+            await interaction.followUp(chunks[i]!);
+          }
         }
+      } else {
+        await interaction.editReply(result);
       }
-    } else {
-      await interaction.editReply(result);
-    }
   } catch (error) {
     Logger.error("❌ CRUD test command failed:", error);
     const errorMsg = error instanceof Error ? error.message : "Unknown error";
@@ -113,6 +113,10 @@ async function testUserProfile(
       preferredResponseStyle: "technical",
       timezone: "UTC",
       language: "en",
+      bio: "Test bio",
+      goals: "Learn testing",
+      preferences: "TypeScript",
+      notes: "General notes",
     };
 
     // Test CREATE
@@ -133,6 +137,10 @@ async function testUserProfile(
       results.push(`   Interests: ${retrieved.interests.join(", ")}`);
       results.push(`   Personality: ${retrieved.personality.join(", ")}`);
       results.push(`   Recent Topics: ${retrieved.recentTopics.join(", ")}`);
+      if (retrieved.bio) results.push(`   Bio: ${retrieved.bio}`);
+      if (retrieved.goals) results.push(`   Goals: ${retrieved.goals}`);
+      if (retrieved.preferences) results.push(`   Preferences: ${retrieved.preferences}`);
+      if (retrieved.notes) results.push(`   Notes: ${retrieved.notes}`);
     } else {
       results.push("❌ Failed to retrieve user profile");
     }

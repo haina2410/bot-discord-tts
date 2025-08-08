@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { Logger } from '../utils/logger.js';
-import type { UserProfile, ChannelContext } from '../ai/contextManager.js';
+import type { UserProfile, ChannelContext, ServerContext } from '../ai/contextManager.js';
 
 export interface ConversationMessage {
     id?: number;
@@ -56,6 +56,13 @@ export interface DatabaseOperations {
     getChannelActiveUsers(channelId: string, activeWithinHours?: number): Promise<string[]>;
     updateUserActivity(channelId: string, userId: string): Promise<boolean>;
 
+    // Server Context Operations
+    createServerProfile(profile: ServerContext): Promise<boolean>;
+    getServerProfile(serverId: string): Promise<ServerContext | null>;
+    updateServerProfile(serverId: string, updates: Partial<ServerContext>): Promise<boolean>;
+    addServerRecentEvent(serverId: string, event: string, detail?: string): Promise<boolean>;
+    getServerRecentEvents(serverId: string, limit?: number): Promise<string[]>;
+
     // Utility Operations
     getUserStats(userId: string): Promise<any>;
     getChannelStats(channelId: string): Promise<any>;
@@ -72,7 +79,7 @@ export class DatabaseCRUD implements DatabaseOperations {
     }
 
     // Prepared statements for better performance
-    private statements: Record<string, Database.Statement> = {};
+    private statements: any = {};
 
     private prepareCachedStatements() {
         try {
@@ -81,10 +88,10 @@ export class DatabaseCRUD implements DatabaseOperations {
             }
             // User Profile statements
             this.statements.insertUserProfile = this.db.prepare(`
-                INSERT OR REPLACE INTO user_profiles 
-                (user_id, username, display_name, interaction_count, last_seen, 
-                 preferred_response_style, timezone, language)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT OR REPLACE INTO user_profiles
+                (user_id, username, display_name, interaction_count, last_seen,
+                 preferred_response_style, timezone, language, bio, goals, preferences, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `);
 
             this.statements.getUserProfile = this.db.prepare(`
@@ -92,9 +99,10 @@ export class DatabaseCRUD implements DatabaseOperations {
             `);
 
             this.statements.updateUserProfile = this.db.prepare(`
-                UPDATE user_profiles 
-                SET username = ?, display_name = ?, interaction_count = ?, 
-                    last_seen = ?, preferred_response_style = ?, timezone = ?, language = ?
+                UPDATE user_profiles
+                SET username = ?, display_name = ?, interaction_count = ?,
+                    last_seen = ?, preferred_response_style = ?, timezone = ?, language = ?,
+                    bio = ?, goals = ?, preferences = ?, notes = ?
                 WHERE user_id = ?
             `);
 
@@ -108,7 +116,7 @@ export class DatabaseCRUD implements DatabaseOperations {
 
             // Channel Context statements
             this.statements.insertChannelContext = this.db.prepare(`
-                INSERT OR REPLACE INTO channel_contexts 
+                INSERT OR REPLACE INTO channel_contexts
                 (channel_id, channel_name, channel_type, conversation_tone, last_activity)
                 VALUES (?, ?, ?, ?, ?)
             `);
@@ -129,6 +137,32 @@ export class DatabaseCRUD implements DatabaseOperations {
 
             this.statements.getAllChannelContexts = this.db.prepare(`
                 SELECT * FROM channel_contexts ORDER BY last_activity DESC
+            `);
+
+            // Server Context statements
+            this.statements.insertServerProfile = this.db.prepare(`
+                INSERT OR REPLACE INTO server_profiles
+                (server_id, server_name, owner_id, member_count, last_activity)
+                VALUES (?, ?, ?, ?, ?)
+            `);
+
+            this.statements.getServerProfile = this.db.prepare(`
+                SELECT * FROM server_profiles WHERE server_id = ?
+            `);
+
+            this.statements.updateServerProfile = this.db.prepare(`
+                UPDATE server_profiles
+                SET server_name = ?, owner_id = ?, member_count = ?, last_activity = ?
+                WHERE server_id = ?
+            `);
+
+            this.statements.insertServerEvent = this.db.prepare(`
+                INSERT INTO server_recent_events (server_id, event, detail, occurred_at)
+                VALUES (?, ?, ?, ?)
+            `);
+
+            this.statements.getServerEvents = this.db.prepare(`
+                SELECT event, detail FROM server_recent_events WHERE server_id = ? ORDER BY occurred_at DESC LIMIT ?
             `);
 
             // Conversation History statements
@@ -244,7 +278,11 @@ export class DatabaseCRUD implements DatabaseOperations {
                 profile.lastSeen,
                 profile.preferredResponseStyle || null,
                 profile.timezone || null,
-                profile.language || null
+                profile.language || null,
+                profile.bio || null,
+                profile.goals || null,
+                profile.preferences || null,
+                profile.notes || null
             );
 
             // Insert interests
@@ -292,7 +330,11 @@ export class DatabaseCRUD implements DatabaseOperations {
                 lastSeen: profileRow.last_seen,
                 preferredResponseStyle: profileRow.preferred_response_style,
                 timezone: profileRow.timezone,
-                language: profileRow.language
+                language: profileRow.language,
+                bio: profileRow.bio,
+                goals: profileRow.goals,
+                preferences: profileRow.preferences,
+                notes: profileRow.notes
             };
 
             return profile;
@@ -319,6 +361,10 @@ export class DatabaseCRUD implements DatabaseOperations {
                 updated.preferredResponseStyle || null,
                 updated.timezone || null,
                 updated.language || null,
+                updated.bio || null,
+                updated.goals || null,
+                updated.preferences || null,
+                updated.notes || null,
                 userId
             );
 
@@ -548,6 +594,93 @@ export class DatabaseCRUD implements DatabaseOperations {
 
         } catch (error) {
             Logger.error('❌ Failed to get all channel contexts:', error);
+            return [];
+        }
+    }
+
+    // =============================================================================
+    // SERVER CONTEXT OPERATIONS
+    // =============================================================================
+
+    async createServerProfile(profile: ServerContext): Promise<boolean> {
+        try {
+            this.statements.insertServerProfile.run(
+                profile.serverId,
+                profile.serverName,
+                profile.ownerId || null,
+                profile.memberCount || 0,
+                profile.lastActivity
+            );
+            Logger.debug(`✅ Created server profile for ${profile.serverName}`);
+            return true;
+        } catch (error) {
+            Logger.error('❌ Failed to create server profile:', error);
+            return false;
+        }
+    }
+
+    async getServerProfile(serverId: string): Promise<ServerContext | null> {
+        try {
+            const row = this.statements.getServerProfile.get(serverId) as any;
+            if (!row) return null;
+
+            const events = await this.getServerRecentEvents(serverId, 10);
+
+            return {
+                serverId: row.server_id,
+                serverName: row.server_name,
+                ownerId: row.owner_id || undefined,
+                memberCount: row.member_count,
+                lastActivity: row.last_activity,
+                recentEvents: events,
+            };
+        } catch (error) {
+            Logger.error('❌ Failed to get server profile:', error);
+            return null;
+        }
+    }
+
+    async updateServerProfile(serverId: string, updates: Partial<ServerContext>): Promise<boolean> {
+        try {
+            const current = await this.getServerProfile(serverId);
+            if (!current) return false;
+
+            const updated = { ...current, ...updates };
+            this.statements.updateServerProfile.run(
+                updated.serverName,
+                updated.ownerId || null,
+                updated.memberCount || 0,
+                updated.lastActivity,
+                serverId
+            );
+            return true;
+        } catch (error) {
+            Logger.error('❌ Failed to update server profile:', error);
+            return false;
+        }
+    }
+
+    async addServerRecentEvent(serverId: string, event: string, detail?: string): Promise<boolean> {
+        try {
+            this.statements.insertServerEvent.run(
+                serverId,
+                event,
+                detail || null,
+                Math.floor(Date.now() / 1000)
+            );
+            return true;
+        } catch (error) {
+            Logger.error('❌ Failed to add server event:', error);
+            return false;
+        }
+    }
+
+    async getServerRecentEvents(serverId: string, limit: number = 10): Promise<string[]> {
+        try {
+            const rows = this.statements.getServerEvents.all(serverId, limit) as any[];
+            return rows.map(r => r.detail ? `${r.event}:${r.detail}` : r.event);
+        } catch (error) {
+            Logger.error('❌ Failed to get server events:', error);
             return [];
         }
     }
@@ -870,10 +1003,12 @@ export class DatabaseCRUD implements DatabaseOperations {
             const interestCount = this.db.prepare('SELECT COUNT(*) as count FROM user_interests').get() as any;
             const personalityCount = this.db.prepare('SELECT COUNT(*) as count FROM user_personality_traits').get() as any;
             const topicCount = this.db.prepare('SELECT COUNT(*) as count FROM user_recent_topics').get() as any;
+            const serverCount = this.db.prepare('SELECT COUNT(*) as count FROM server_profiles').get() as any;
 
             return {
                 users: userCount.count,
                 channels: channelCount.count,
+                servers: serverCount.count,
                 messages: messageCount.count,
                 interests: interestCount.count,
                 personalityTraits: personalityCount.count,

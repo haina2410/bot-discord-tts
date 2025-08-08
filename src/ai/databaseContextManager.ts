@@ -6,6 +6,7 @@ import type {
   UserProfile,
   ChannelContext,
   MessageContext,
+  ServerContext,
 } from "./contextManager.js";
 
 /**
@@ -45,6 +46,14 @@ export class DatabaseContextManager {
       message.channel.name
     );
 
+    // Get or create server context if available
+    const serverContext = message.guild.id
+      ? await this.getServerContext(
+          message.guild.id,
+          message.guild.name || "Unknown"
+        )
+      : undefined;
+
     // Extract topics from recent conversation
     const recentTopics = this.extractTopics(conversationHistory);
 
@@ -64,6 +73,9 @@ export class DatabaseContextManager {
     // Update profiles with new information (async)
     await this.updateUserProfile(userProfile, message);
     await this.updateChannelContext(channelContext, message);
+    if (serverContext) {
+      await this.updateServerContext(serverContext, message);
+    }
 
     // Store conversation message in database
     await this.crud.addConversationMessage({
@@ -80,6 +92,7 @@ export class DatabaseContextManager {
       message,
       userProfile,
       channelContext,
+      serverContext,
       conversationHistory: conversationHistory.map((msg) => ({
         ...msg,
         topics: this.extractTopicsFromMessage(msg.content),
@@ -127,6 +140,10 @@ export class DatabaseContextManager {
         recentTopics: [],
         interactionCount: 0,
         lastSeen: Date.now(),
+        bio: undefined,
+        goals: undefined,
+        preferences: undefined,
+        notes: undefined,
       };
 
       await this.crud.createUserProfile(profile);
@@ -161,6 +178,55 @@ export class DatabaseContextManager {
     }
 
     return context;
+  }
+
+  /**
+   * Get or create server context from database
+   */
+  private async getServerContext(
+    serverId: string,
+    serverName: string
+  ) {
+    let context = await this.crud.getServerProfile(serverId);
+
+    if (!context) {
+      context = {
+        serverId,
+        serverName,
+        recentEvents: [],
+        lastActivity: Date.now(),
+      };
+      await this.crud.createServerProfile(context);
+      Logger.debug(`🏠 Created new server context for ${serverName}`);
+    }
+
+    // Always fetch recent events
+    context.recentEvents = await this.crud.getServerRecentEvents(serverId, 10);
+
+    return context;
+  }
+
+  /**
+   * Update server context with new message data
+   */
+  private async updateServerContext(
+    context: ServerContext,
+    message: ProcessedMessage
+  ) {
+    const updates = {
+      serverName: context.serverName,
+      lastActivity: message.timestamp,
+    };
+    await this.crud.updateServerProfile(context.serverId, updates);
+    await this.crud.addServerRecentEvent(
+      context.serverId,
+      "message",
+      message.author.username
+    );
+
+    context.lastActivity = message.timestamp;
+    context.recentEvents.unshift(`message:${message.author.username}`);
+    context.recentEvents = context.recentEvents.slice(0, 10);
   }
 
   /**
@@ -685,6 +751,11 @@ export class DatabaseContextManager {
       parts.push(`Channel topics: ${topics}`);
     }
 
+    if (context.serverContext && context.serverContext.recentEvents.length > 0) {
+      const events = context.serverContext.recentEvents.slice(0, 3).join(", ");
+      parts.push(`Server events: ${events}`);
+    }
+
     if (context.contextualCues.length > 0) {
       parts.push(`Context: ${context.contextualCues.join(", ")}`);
     }
@@ -744,6 +815,7 @@ export class DatabaseContextManager {
     return {
       userProfiles: dbStats?.users || 0,
       channelContexts: dbStats?.channels || 0,
+      serverContexts: dbStats?.servers || 0,
       totalMessages: dbStats?.messages || 0,
       totalInteractions: dbStats?.interests || 0, // Approximate
       databaseStats: dbStats,
@@ -762,7 +834,7 @@ export class DatabaseContextManager {
 
     const stats = await this.getStats();
     Logger.info(
-      `🧹 Context cleanup completed. ${stats.userProfiles} users, ${stats.channelContexts} channels, ${stats.totalMessages} messages`
+      `🧹 Context cleanup completed. ${stats.userProfiles} users, ${stats.channelContexts} channels, ${stats.serverContexts} servers, ${stats.totalMessages} messages`
     );
   }
 

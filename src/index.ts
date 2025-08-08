@@ -71,6 +71,8 @@ setVoiceManager(voiceManager);
 (client as any).ttsManager = ttsManager;
 (client as any).voiceManager = voiceManager;
 (client as any).databaseManager = databaseManager;
+(client as any).channelManager = channelManager;
+(client as any).messageProcessor = messageProcessor;
 
 // Load event handlers
 loadEvents(client);

@@ -34,7 +34,10 @@ CREATE TABLE IF NOT EXISTS server_profiles (
   owner_id TEXT,
   member_count INTEGER DEFAULT 0,
   last_activity BIGINT NOT NULL,
-  recent_events JSONB DEFAULT '[]'
+  recent_events JSONB DEFAULT '[]',
+  ignoring_channels JSONB DEFAULT '[]',
+  listening_channels JSONB DEFAULT '[]',
+  command_prefix TEXT DEFAULT '!'
 );
 
 CREATE TABLE IF NOT EXISTS conversation_history (

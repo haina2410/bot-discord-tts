@@ -120,6 +120,45 @@ export class ChannelManager {
   }
 
   /**
+   * Add a channel to ignore list
+   */
+  addIgnoredChannel(channelId: string): boolean {
+    const channel = this.client.channels.cache.get(channelId);
+    if (!channel) {
+      Logger.warn(`Cannot ignore channel ${channelId} - not found`);
+      return false;
+    }
+
+    this.ignoredChannels.add(channelId);
+    const channelInfo = this.getChannelInfo(channel);
+    Logger.success(`🚫 Added channel to ignore list: #${channelInfo.name}`);
+    return true;
+  }
+
+  /**
+   * Remove a channel from ignore list
+   */
+  removeIgnoredChannel(channelId: string): boolean {
+    if (!this.ignoredChannels.has(channelId)) {
+      Logger.warn(`Channel ${channelId} not in ignore list`);
+      return false;
+    }
+
+    this.ignoredChannels.delete(channelId);
+    const channel = this.client.channels.cache.get(channelId);
+    const channelName = channel && "name" in channel ? channel.name : channelId;
+    Logger.success(`✅ Removed channel from ignore list: #${channelName}`);
+    return true;
+  }
+
+  /**
+   * Get all ignored channels
+   */
+  getIgnoredChannels(): string[] {
+    return Array.from(this.ignoredChannels);
+  }
+
+  /**
    * Get channel statistics
    */
   getChannelStats() {

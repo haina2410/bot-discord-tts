@@ -44,7 +44,8 @@ export interface ProcessedMessage {
 }
 
 export class MessageProcessor {
-    private commandPrefixes = ['!', '/', '$', '?'];
+    private defaultPrefix = '!';
+    private guildPrefixes = new Map<string, string>();
     private botUserId?: string;
     private channelListeningModes: Map<string, ListeningMode> = new Map();
     private defaultListeningMode: ListeningMode = { 
@@ -121,7 +122,7 @@ export class MessageProcessor {
      */
     private determineMessageType(message: Message): 'command' | 'mention' | 'regular' {
         // Check if it's a command
-        if (this.isCommand(message.content)) {
+        if (this.isCommand(message.content, message.guild?.id)) {
             return 'command';
         }
 
@@ -143,25 +144,42 @@ export class MessageProcessor {
     /**
      * Check if a message is a command
      */
-    private isCommand(content: string): boolean {
+    private isCommand(content: string, guildId?: string): boolean {
         const trimmed = content.trim();
-        return this.commandPrefixes.some(prefix => trimmed.startsWith(prefix));
+        const prefix = guildId ? this.getCommandPrefix(guildId) : this.defaultPrefix;
+        return trimmed.startsWith(prefix);
     }
 
     /**
      * Extract command and arguments from message
      */
-    extractCommand(content: string): { command: string; args: string[] } | null {
-        if (!this.isCommand(content)) {
+    extractCommand(content: string, guildId?: string): { command: string; args: string[] } | null {
+        if (!this.isCommand(content, guildId)) {
             return null;
         }
 
-        const trimmed = content.trim();
-        const parts = trimmed.split(/\s+/);
-        const command = parts[0]?.substring(1).toLowerCase() || ''; // Remove prefix and lowercase
+        const prefix = guildId ? this.getCommandPrefix(guildId) : this.defaultPrefix;
+        const withoutPrefix = content.trim().slice(prefix.length).trim();
+        const parts = withoutPrefix.split(/\s+/);
+        const command = parts[0]?.toLowerCase() || '';
         const args = parts.slice(1);
 
         return { command, args };
+    }
+
+    /**
+     * Set command prefix for a guild
+     */
+    setCommandPrefix(guildId: string, prefix: string): void {
+        this.guildPrefixes.set(guildId, prefix);
+        Logger.info(`Set command prefix for guild ${guildId} to ${prefix}`);
+    }
+
+    /**
+     * Get command prefix for a guild
+     */
+    getCommandPrefix(guildId: string): string {
+        return this.guildPrefixes.get(guildId) || this.defaultPrefix;
     }
 
     /**

@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { PrismaClient } from '@prisma/client';
 import { Logger } from '../utils/logger.js';
 import type { UserProfile, ChannelContext, ServerContext } from '../ai/contextManager.js';
 
@@ -42,22 +42,24 @@ export interface DatabaseOperations {
 }
 
 export class DatabaseCRUD implements DatabaseOperations {
-  private pool: Pool;
+  private prisma: PrismaClient;
 
-  constructor(pool: Pool) {
-    this.pool = pool;
+  constructor(prisma: PrismaClient) {
+    this.prisma = prisma;
   }
 
   // ======================= USER PROFILES =======================
   async createUserProfile(profile: UserProfile): Promise<boolean> {
     try {
-      await this.pool.query(
-        `INSERT INTO user_profiles (
+      await this.prisma.$executeRaw`
+        INSERT INTO user_profiles (
            user_id, username, display_name, interaction_count, last_seen,
            preferred_response_style, timezone, language, bio, goals, preferences, notes,
            interests, personality, recent_topics
          ) VALUES (
-           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15
+           ${profile.userId}, ${profile.username}, ${profile.displayName ?? null}, ${profile.interactionCount}, ${profile.lastSeen},
+           ${profile.preferredResponseStyle ?? null}, ${profile.timezone ?? null}, ${profile.language ?? null}, ${profile.bio ?? null}, ${profile.goals ?? null}, ${profile.preferences ?? null}, ${profile.notes ?? null},
+           ${JSON.stringify(profile.interests)}, ${JSON.stringify(profile.personality)}, ${JSON.stringify(profile.recentTopics)}
          )
          ON CONFLICT (user_id) DO UPDATE SET
            username=EXCLUDED.username,
@@ -73,25 +75,7 @@ export class DatabaseCRUD implements DatabaseOperations {
            notes=EXCLUDED.notes,
            interests=EXCLUDED.interests,
            personality=EXCLUDED.personality,
-           recent_topics=EXCLUDED.recent_topics`,
-        [
-          profile.userId,
-          profile.username,
-          profile.displayName ?? null,
-          profile.interactionCount,
-          profile.lastSeen,
-          profile.preferredResponseStyle ?? null,
-          profile.timezone ?? null,
-          profile.language ?? null,
-          profile.bio ?? null,
-          profile.goals ?? null,
-          profile.preferences ?? null,
-          profile.notes ?? null,
-          JSON.stringify(profile.interests),
-          JSON.stringify(profile.personality),
-          JSON.stringify(profile.recentTopics),
-        ]
-      );
+           recent_topics=EXCLUDED.recent_topics`;
       return true;
     } catch (error) {
       Logger.error('Failed to create user profile:', error);
@@ -101,9 +85,9 @@ export class DatabaseCRUD implements DatabaseOperations {
 
   async getUserProfile(userId: string): Promise<UserProfile | null> {
     try {
-      const res = await this.pool.query('SELECT * FROM user_profiles WHERE user_id=$1', [userId]);
-      if (res.rowCount === 0) return null;
-      const row = res.rows[0];
+      const res: any = await this.prisma.$queryRaw`SELECT * FROM user_profiles WHERE user_id=${userId}`;
+      if (res.length === 0) return null;
+      const row = res[0];
       return {
         userId: row.user_id,
         username: row.username,
@@ -153,7 +137,7 @@ export class DatabaseCRUD implements DatabaseOperations {
     values.push(userId);
     const query = `UPDATE user_profiles SET ${fields.join(', ')} WHERE user_id=$${idx}`;
     try {
-      await this.pool.query(query, values);
+      await this.prisma.$executeRawUnsafe(query, ...values);
       return true;
     } catch (error) {
       Logger.error('Failed to update user profile:', error);
@@ -163,28 +147,21 @@ export class DatabaseCRUD implements DatabaseOperations {
   // ======================= CHANNEL CONTEXTS =======================
   async createChannelContext(context: ChannelContext): Promise<boolean> {
     try {
-      await this.pool.query(
-        `INSERT INTO channel_contexts (
+      await this.prisma.$executeRaw`
+        INSERT INTO channel_contexts (
            channel_id, channel_name, channel_type, conversation_tone, last_activity,
            recent_topics, active_users
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+         ) VALUES (
+           ${context.channelId}, ${context.channelName}, ${context.channelType}, ${context.conversationTone}, ${context.lastActivity},
+           ${JSON.stringify(context.recentTopics)}, ${JSON.stringify(context.activeUsers)}
+         )
          ON CONFLICT (channel_id) DO UPDATE SET
            channel_name=EXCLUDED.channel_name,
            channel_type=EXCLUDED.channel_type,
            conversation_tone=EXCLUDED.conversation_tone,
            last_activity=EXCLUDED.last_activity,
            recent_topics=EXCLUDED.recent_topics,
-           active_users=EXCLUDED.active_users`,
-        [
-          context.channelId,
-          context.channelName,
-          context.channelType,
-          context.conversationTone,
-          context.lastActivity,
-          JSON.stringify(context.recentTopics),
-          JSON.stringify(context.activeUsers),
-        ]
-      );
+           active_users=EXCLUDED.active_users`;
       return true;
     } catch (error) {
       Logger.error('Failed to create channel context:', error);
@@ -194,9 +171,9 @@ export class DatabaseCRUD implements DatabaseOperations {
 
   async getChannelContext(channelId: string): Promise<ChannelContext | null> {
     try {
-      const res = await this.pool.query('SELECT * FROM channel_contexts WHERE channel_id=$1', [channelId]);
-      if (res.rowCount === 0) return null;
-      const row = res.rows[0];
+      const res: any = await this.prisma.$queryRaw`SELECT * FROM channel_contexts WHERE channel_id=${channelId}`;
+      if (res.length === 0) return null;
+      const row = res[0];
       return {
         channelId: row.channel_id,
         channelName: row.channel_name,
@@ -230,7 +207,7 @@ export class DatabaseCRUD implements DatabaseOperations {
     values.push(channelId);
     const query = `UPDATE channel_contexts SET ${fields.join(', ')} WHERE channel_id=$${idx}`;
     try {
-      await this.pool.query(query, values);
+      await this.prisma.$executeRawUnsafe(query, ...values);
       return true;
     } catch (error) {
       Logger.error('Failed to update channel context:', error);
@@ -240,14 +217,11 @@ export class DatabaseCRUD implements DatabaseOperations {
 
   async addChannelActiveUser(channelId: string, userId: string): Promise<boolean> {
     try {
-      const res = await this.pool.query('SELECT active_users FROM channel_contexts WHERE channel_id=$1', [channelId]);
-      if (res.rowCount === 0) return false;
-      const users: string[] = res.rows[0].active_users ?? [];
+      const res: any = await this.prisma.$queryRaw`SELECT active_users FROM channel_contexts WHERE channel_id=${channelId}`;
+      if (res.length === 0) return false;
+      const users: string[] = res[0].active_users ?? [];
       if (!users.includes(userId)) users.push(userId);
-      await this.pool.query('UPDATE channel_contexts SET active_users=$1 WHERE channel_id=$2', [
-        JSON.stringify(users),
-        channelId,
-      ]);
+      await this.prisma.$executeRaw`UPDATE channel_contexts SET active_users=${JSON.stringify(users)} WHERE channel_id=${channelId}`;
       return true;
     } catch (error) {
       Logger.error('Failed to add channel active user:', error);
@@ -257,8 +231,8 @@ export class DatabaseCRUD implements DatabaseOperations {
 
   async getAllUserProfiles(): Promise<UserProfile[]> {
     try {
-      const res = await this.pool.query('SELECT * FROM user_profiles');
-      return res.rows.map((row) => ({
+      const res: any = await this.prisma.$queryRaw`SELECT * FROM user_profiles`;
+      return res.map((row: any) => ({
         userId: row.user_id,
         username: row.username,
         displayName: row.display_name ?? undefined,
@@ -283,8 +257,8 @@ export class DatabaseCRUD implements DatabaseOperations {
 
   async getAllChannelContexts(): Promise<ChannelContext[]> {
     try {
-      const res = await this.pool.query('SELECT * FROM channel_contexts');
-      return res.rows.map((row) => ({
+      const res: any = await this.prisma.$queryRaw`SELECT * FROM channel_contexts`;
+      return res.map((row: any) => ({
         channelId: row.channel_id,
         channelName: row.channel_name,
         channelType: row.channel_type,
@@ -302,25 +276,18 @@ export class DatabaseCRUD implements DatabaseOperations {
   // ======================= SERVER PROFILES =======================
   async createServerProfile(profile: ServerContext): Promise<boolean> {
     try {
-      await this.pool.query(
-        `INSERT INTO server_profiles (
+      await this.prisma.$executeRaw`
+        INSERT INTO server_profiles (
            server_id, server_name, owner_id, member_count, last_activity, recent_events
-         ) VALUES ($1,$2,$3,$4,$5,$6)
+         ) VALUES (
+           ${profile.serverId}, ${profile.serverName}, ${profile.ownerId ?? null}, ${profile.memberCount ?? 0}, ${profile.lastActivity}, ${JSON.stringify(profile.recentEvents)}
+         )
          ON CONFLICT (server_id) DO UPDATE SET
            server_name=EXCLUDED.server_name,
            owner_id=EXCLUDED.owner_id,
            member_count=EXCLUDED.member_count,
            last_activity=EXCLUDED.last_activity,
-           recent_events=EXCLUDED.recent_events`,
-        [
-          profile.serverId,
-          profile.serverName,
-          profile.ownerId ?? null,
-          profile.memberCount ?? 0,
-          profile.lastActivity,
-          JSON.stringify(profile.recentEvents),
-        ]
-      );
+           recent_events=EXCLUDED.recent_events`;
       return true;
     } catch (error) {
       Logger.error('Failed to create server profile:', error);
@@ -330,9 +297,9 @@ export class DatabaseCRUD implements DatabaseOperations {
 
   async getServerProfile(serverId: string): Promise<ServerContext | null> {
     try {
-      const res = await this.pool.query('SELECT * FROM server_profiles WHERE server_id=$1', [serverId]);
-      if (res.rowCount === 0) return null;
-      const row = res.rows[0];
+      const res: any = await this.prisma.$queryRaw`SELECT * FROM server_profiles WHERE server_id=${serverId}`;
+      if (res.length === 0) return null;
+      const row = res[0];
       return {
         serverId: row.server_id,
         serverName: row.server_name,
@@ -364,7 +331,7 @@ export class DatabaseCRUD implements DatabaseOperations {
     values.push(serverId);
     const query = `UPDATE server_profiles SET ${fields.join(', ')} WHERE server_id=$${idx}`;
     try {
-      await this.pool.query(query, values);
+      await this.prisma.$executeRawUnsafe(query, ...values);
       return true;
     } catch (error) {
       Logger.error('Failed to update server profile:', error);
@@ -374,13 +341,10 @@ export class DatabaseCRUD implements DatabaseOperations {
 
   async addServerRecentEvent(serverId: string, event: string, detail?: string): Promise<boolean> {
     try {
-      const res = await this.pool.query('SELECT recent_events FROM server_profiles WHERE server_id=$1', [serverId]);
-      const events: string[] = res.rowCount ? res.rows[0].recent_events ?? [] : [];
+      const res: any = await this.prisma.$queryRaw`SELECT recent_events FROM server_profiles WHERE server_id=${serverId}`;
+      const events: string[] = res.length ? res[0].recent_events ?? [] : [];
       events.unshift(detail ? `${event}:${detail}` : event);
-      await this.pool.query('UPDATE server_profiles SET recent_events=$1 WHERE server_id=$2', [
-        JSON.stringify(events.slice(0, 50)),
-        serverId,
-      ]);
+      await this.prisma.$executeRaw`UPDATE server_profiles SET recent_events=${JSON.stringify(events.slice(0,50))} WHERE server_id=${serverId}`;
       return true;
     } catch (error) {
       Logger.error('Failed to add server event:', error);
@@ -390,9 +354,9 @@ export class DatabaseCRUD implements DatabaseOperations {
 
   async getServerRecentEvents(serverId: string, limit = 10): Promise<string[]> {
     try {
-      const res = await this.pool.query('SELECT recent_events FROM server_profiles WHERE server_id=$1', [serverId]);
-      if (res.rowCount === 0) return [];
-      const events: string[] = res.rows[0].recent_events ?? [];
+      const res: any = await this.prisma.$queryRaw`SELECT recent_events FROM server_profiles WHERE server_id=${serverId}`;
+      if (res.length === 0) return [];
+      const events: string[] = res[0].recent_events ?? [];
       return events.slice(0, limit);
     } catch (error) {
       Logger.error('Failed to get server events:', error);
@@ -403,21 +367,12 @@ export class DatabaseCRUD implements DatabaseOperations {
   // ======================= CONVERSATION HISTORY =======================
   async addConversationMessage(message: ConversationMessage): Promise<number | null> {
     try {
-      const res = await this.pool.query(
-        `INSERT INTO conversation_history (
+      const res: any = await this.prisma.$queryRaw`INSERT INTO conversation_history (
            channel_id, user_id, role, content, timestamp, author, relevance_score
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-        [
-          message.channelId,
-          message.userId ?? null,
-          message.role,
-          message.content,
-          message.timestamp,
-          message.author ?? null,
-          message.relevanceScore ?? 0,
-        ]
-      );
-      return res.rows[0]?.id ?? null;
+         ) VALUES (
+           ${message.channelId}, ${message.userId ?? null}, ${message.role}, ${message.content}, ${message.timestamp}, ${message.author ?? null}, ${message.relevanceScore ?? 0}
+         ) RETURNING id`;
+      return res[0]?.id ?? null;
     } catch (error) {
       Logger.error('Failed to add conversation message:', error);
       return null;
@@ -426,11 +381,8 @@ export class DatabaseCRUD implements DatabaseOperations {
 
   async getConversationHistory(channelId: string, limit = 20): Promise<ConversationMessage[]> {
     try {
-      const res = await this.pool.query(
-        `SELECT * FROM conversation_history WHERE channel_id=$1 ORDER BY timestamp DESC LIMIT $2`,
-        [channelId, limit]
-      );
-      return res.rows.map((row) => ({
+      const res: any = await this.prisma.$queryRaw`SELECT * FROM conversation_history WHERE channel_id=${channelId} ORDER BY timestamp DESC LIMIT ${limit}`;
+      return res.map((row: any) => ({
         id: row.id,
         channelId: row.channel_id,
         userId: row.user_id,
@@ -449,8 +401,9 @@ export class DatabaseCRUD implements DatabaseOperations {
   async deleteOldConversationHistory(olderThanDays: number): Promise<number> {
     const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
     try {
-      const res = await this.pool.query('DELETE FROM conversation_history WHERE timestamp < $1', [cutoff]);
-      return res.rowCount;
+      const res: any = await this.prisma.$executeRaw`DELETE FROM conversation_history WHERE timestamp < ${cutoff}`;
+      // $executeRaw returns number of affected rows
+      return Number(res);
     } catch (error) {
       Logger.error('Failed to delete old conversation history:', error);
       return 0;
@@ -460,11 +413,8 @@ export class DatabaseCRUD implements DatabaseOperations {
   // ======================= STATS & CLEANUP =======================
   async getUserStats(userId: string): Promise<any> {
     try {
-      const res = await this.pool.query(
-        'SELECT COUNT(*) AS messages FROM conversation_history WHERE user_id=$1',
-        [userId]
-      );
-      return { messages: Number(res.rows[0].messages) };
+      const res: any = await this.prisma.$queryRaw`SELECT COUNT(*) AS messages FROM conversation_history WHERE user_id=${userId}`;
+      return { messages: Number(res[0].messages) };
     } catch (error) {
       Logger.error('Failed to get user stats:', error);
       return null;
@@ -473,11 +423,8 @@ export class DatabaseCRUD implements DatabaseOperations {
 
   async getChannelStats(channelId: string): Promise<any> {
     try {
-      const res = await this.pool.query(
-        'SELECT COUNT(*) AS messages FROM conversation_history WHERE channel_id=$1',
-        [channelId]
-      );
-      return { messages: Number(res.rows[0].messages) };
+      const res: any = await this.prisma.$queryRaw`SELECT COUNT(*) AS messages FROM conversation_history WHERE channel_id=${channelId}`;
+      return { messages: Number(res[0].messages) };
     } catch (error) {
       Logger.error('Failed to get channel stats:', error);
       return null;
@@ -486,14 +433,12 @@ export class DatabaseCRUD implements DatabaseOperations {
 
   async getDatabaseStats(): Promise<any> {
     try {
-      const res = await this.pool.query(
-        `SELECT
+      const res: any = await this.prisma.$queryRaw`SELECT
            (SELECT COUNT(*) FROM user_profiles) AS users,
            (SELECT COUNT(*) FROM channel_contexts) AS channels,
            (SELECT COUNT(*) FROM server_profiles) AS servers,
-           (SELECT COUNT(*) FROM conversation_history) AS messages`
-      );
-      return res.rows[0];
+           (SELECT COUNT(*) FROM conversation_history) AS messages`;
+      return res[0];
     } catch (error) {
       Logger.error('Failed to get database stats:', error);
       return null;

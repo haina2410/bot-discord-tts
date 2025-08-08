@@ -1,6 +1,6 @@
-import { Pool } from 'pg';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { PrismaClient } from '@prisma/client';
 import { Logger } from '../utils/logger.js';
 import { config } from '../config/bot.js';
 
@@ -9,7 +9,7 @@ export interface DatabaseConfig {
 }
 
 export class DatabaseManager {
-  private pool: Pool | null = null;
+  private prisma: PrismaClient | null = null;
   private config: DatabaseConfig;
   private ready = false;
 
@@ -21,22 +21,24 @@ export class DatabaseManager {
 
   async initialize(): Promise<boolean> {
     try {
-      Logger.info('🗄️ Connecting to PostgreSQL database...');
-      this.pool = new Pool({ connectionString: this.config.connectionString });
-      await this.pool.query('SELECT 1');
+      Logger.info('🗄️ Connecting to PostgreSQL database via Prisma...');
+      this.prisma = new PrismaClient({
+        datasources: { db: { url: this.config.connectionString } },
+      });
+      await this.prisma.$connect();
       await this.setupSchema();
       this.ready = true;
       Logger.success('✅ Database connection established');
       return true;
     } catch (error) {
       Logger.error('❌ Database initialization failed:', error);
-      this.pool = null;
+      this.prisma = null;
       return false;
     }
   }
 
   private async setupSchema(): Promise<void> {
-    if (!this.pool) throw new Error('Database not connected');
+    if (!this.prisma) throw new Error('Database not connected');
     const schemaPath = join(process.cwd(), 'src', 'database', 'schema.sql');
     const schemaSQL = readFileSync(schemaPath, 'utf-8');
     const statements = schemaSQL
@@ -44,15 +46,15 @@ export class DatabaseManager {
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
     for (const stmt of statements) {
-      await this.pool.query(stmt);
+      await this.prisma.$executeRawUnsafe(stmt);
     }
   }
 
-  getDatabase(): Pool {
-    if (!this.pool) {
+  getDatabase(): PrismaClient {
+    if (!this.prisma) {
       throw new Error('Database not initialized');
     }
-    return this.pool;
+    return this.prisma;
   }
 
   isReady(): boolean {
@@ -60,21 +62,19 @@ export class DatabaseManager {
   }
 
   async getStats(): Promise<any> {
-    if (!this.pool) return null;
-    const result = await this.pool.query(
-      `SELECT
+    if (!this.prisma) return null;
+    const result: any = await this.prisma.$queryRaw`SELECT
          (SELECT COUNT(*) FROM user_profiles) AS users,
          (SELECT COUNT(*) FROM channel_contexts) AS channels,
          (SELECT COUNT(*) FROM server_profiles) AS servers,
-         (SELECT COUNT(*) FROM conversation_history) AS messages`
-    );
-    return result.rows[0];
+         (SELECT COUNT(*) FROM conversation_history) AS messages`;
+    return result[0];
   }
 
   async cleanup(): Promise<void> {
-    if (this.pool) {
-      await this.pool.end();
-      this.pool = null;
+    if (this.prisma) {
+      await this.prisma.$disconnect();
+      this.prisma = null;
       this.ready = false;
     }
   }
@@ -82,9 +82,9 @@ export class DatabaseManager {
   async healthCheck(): Promise<{ healthy: boolean; checks: Record<string, boolean>; error?: string }> {
     const checks: Record<string, boolean> = {};
     try {
-      checks.connected = !!this.pool;
-      if (this.pool) {
-        await this.pool.query('SELECT 1');
+      checks.connected = !!this.prisma;
+      if (this.prisma) {
+        await this.prisma.$queryRaw`SELECT 1`;
         checks.queryable = true;
       } else {
         checks.queryable = false;

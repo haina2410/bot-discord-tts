@@ -61,12 +61,13 @@ export class DatabaseManager {
 
   async getStats(): Promise<any> {
     if (!this.prisma) return null;
-    const result: any = await this.prisma.$queryRaw`SELECT
-         (SELECT COUNT(*) FROM user_profiles) AS users,
-         (SELECT COUNT(*) FROM channel_contexts) AS channels,
-         (SELECT COUNT(*) FROM server_profiles) AS servers,
-         (SELECT COUNT(*) FROM conversation_history) AS messages`;
-    return result[0];
+    const [users, channels, servers, messages] = await Promise.all([
+      this.prisma.userProfile.count(),
+      this.prisma.channelContext.count(),
+      this.prisma.serverProfile.count(),
+      this.prisma.conversationHistory.count(),
+    ]);
+    return { users, channels, servers, messages };
   }
 
   async cleanup(): Promise<void> {
@@ -82,7 +83,7 @@ export class DatabaseManager {
     try {
       checks.connected = !!this.prisma;
       if (this.prisma) {
-        await this.prisma.$queryRaw`SELECT 1`;
+        await this.prisma.userProfile.count();
         checks.queryable = true;
       } else {
         checks.queryable = false;

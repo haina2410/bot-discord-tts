@@ -5,6 +5,9 @@ import { ttsTestCommand, aiTtsTestCommand } from '../commands/ttsTest.js';
 import { databaseTestCommand, databaseSchemaTestCommand } from '../commands/databaseTest.js';
 import listeningModeCommand, { setMessageProcessor as setListeningCommandMessageProcessor } from '../commands/listeningMode.js';
 import { joinVoiceCommand, leaveVoiceCommand } from '../commands/joinVoice.js';
+import ignoreChannelCommand from '../commands/ignoreChannel.js';
+import listenChannelCommand from '../commands/listenChannel.js';
+import setPrefixCommand from '../commands/setPrefix.js';
 
 export interface Command {
     name: string;
@@ -47,7 +50,7 @@ export class CommandHandler {
      * Handle a command message
      */
     async handleCommand(message: Message): Promise<boolean> {
-        const commandData = this.messageProcessor.extractCommand(message.content);
+        const commandData = this.messageProcessor.extractCommand(message.content, message.guild?.id);
         if (!commandData) {
             return false;
         }
@@ -330,6 +333,39 @@ export class CommandHandler {
             aliases: leaveVoiceCommand.aliases,
             execute: async (message: Message, args: string[]) => {
                 await leaveVoiceCommand.execute(message);
+            }
+        });
+
+        // Ignore channel command
+        this.registerCommand({
+            name: ignoreChannelCommand.name,
+            description: ignoreChannelCommand.description,
+            usage: ignoreChannelCommand.usage,
+            aliases: ignoreChannelCommand.aliases,
+            execute: async (message: Message, args: string[]) => {
+                await ignoreChannelCommand.execute(message, args);
+            }
+        });
+
+        // Listen channel command
+        this.registerCommand({
+            name: listenChannelCommand.name,
+            description: listenChannelCommand.description,
+            usage: listenChannelCommand.usage,
+            aliases: listenChannelCommand.aliases,
+            execute: async (message: Message, args: string[]) => {
+                await listenChannelCommand.execute(message, args);
+            }
+        });
+
+        // Set prefix command
+        this.registerCommand({
+            name: setPrefixCommand.name,
+            description: setPrefixCommand.description,
+            usage: setPrefixCommand.usage,
+            aliases: setPrefixCommand.aliases,
+            execute: async (message: Message, args: string[]) => {
+                await setPrefixCommand.execute(message, args);
             }
         });
 

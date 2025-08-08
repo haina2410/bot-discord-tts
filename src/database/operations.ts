@@ -28,7 +28,7 @@ export interface DatabaseOperations {
   createServerProfile(profile: ServerContext): Promise<boolean>;
   getServerProfile(serverId: string): Promise<ServerContext | null>;
   updateServerProfile(serverId: string, updates: Partial<ServerContext>): Promise<boolean>;
-  addServerRecentEvent(serverId: string, event: string, detail?: string): Promise<boolean>;
+  addServerRecentEvent(serverId: string, event: string): Promise<boolean>;
   getServerRecentEvents(serverId: string, limit?: number): Promise<string[]>;
 
   addConversationMessage(message: ConversationMessage): Promise<number | null>;
@@ -273,6 +273,9 @@ export class DatabaseCRUD implements DatabaseOperations {
           memberCount: profile.memberCount ?? 0,
           lastActivity: BigInt(profile.lastActivity),
           recentEvents: profile.recentEvents,
+          ignoringChannels: profile.ignoringChannels,
+          listeningChannels: profile.listeningChannels,
+          commandPrefix: profile.commandPrefix,
         },
         create: {
           serverId: profile.serverId,
@@ -281,6 +284,9 @@ export class DatabaseCRUD implements DatabaseOperations {
           memberCount: profile.memberCount ?? 0,
           lastActivity: BigInt(profile.lastActivity),
           recentEvents: profile.recentEvents,
+          ignoringChannels: profile.ignoringChannels,
+          listeningChannels: profile.listeningChannels,
+          commandPrefix: profile.commandPrefix,
         },
       });
       return true;
@@ -300,6 +306,9 @@ export class DatabaseCRUD implements DatabaseOperations {
         ownerId: row.ownerId ?? undefined,
         memberCount: row.memberCount ?? undefined,
         recentEvents: (row.recentEvents as string[]) ?? [],
+        ignoringChannels: (row.ignoringChannels as string[]) ?? [],
+        listeningChannels: (row.listeningChannels as string[]) ?? [],
+        commandPrefix: row.commandPrefix ?? undefined,
         lastActivity: Number(row.lastActivity),
       };
     } catch (error) {
@@ -324,11 +333,11 @@ export class DatabaseCRUD implements DatabaseOperations {
     }
   }
 
-  async addServerRecentEvent(serverId: string, event: string, detail?: string): Promise<boolean> {
+  async addServerRecentEvent(serverId: string, event: string): Promise<boolean> {
     try {
       const row = await this.prisma.serverProfile.findUnique({ where: { serverId } });
       const events: string[] = row?.recentEvents ? (row.recentEvents as string[]) : [];
-      events.unshift(detail ? `${event}:${detail}` : event);
+      events.unshift(event);
       await this.prisma.serverProfile.update({
         where: { serverId },
         data: { recentEvents: events.slice(0, 50) },

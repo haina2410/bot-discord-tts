@@ -40,6 +40,9 @@ export interface ServerContext {
   ownerId?: string;
   memberCount?: number;
   recentEvents: string[];
+  ignoringChannels: string[];
+  listeningChannels: string[];
+  commandPrefix?: string;
   lastActivity: number;
 }
 
@@ -308,6 +311,9 @@ export class ContextManager {
         serverId,
         serverName,
         recentEvents: [],
+        ignoringChannels: [],
+        listeningChannels: [],
+        commandPrefix: '!',
         lastActivity: Date.now(),
       };
       this.serverContexts.set(serverId, context);
@@ -325,9 +331,6 @@ export class ContextManager {
     message: ProcessedMessage
   ) {
     context.lastActivity = message.timestamp;
-    const event = `msg:${message.author.username}`;
-    context.recentEvents.unshift(event);
-    context.recentEvents = context.recentEvents.slice(0, 20);
   }
 
   /**

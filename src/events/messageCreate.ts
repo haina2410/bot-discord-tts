@@ -76,20 +76,6 @@ export default {
     );
     messageProcessor.logMessage(processedMessage);
 
-    // Record server event
-    if (databaseManager?.isReady() && message.guild) {
-      try {
-        const crud = new DatabaseCRUD(databaseManager.getDatabase());
-        await crud.addServerRecentEvent(
-          message.guild.id,
-          "message",
-          message.author.id
-        );
-      } catch (err) {
-        Logger.debug("Failed to log server event", err);
-      }
-    }
-
     // Handle commands
     if (processedMessage.messageType === "command" && commandHandler) {
       const handled = await commandHandler.handleCommand(message);

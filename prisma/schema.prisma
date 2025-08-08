@@ -46,6 +46,9 @@ model ServerProfile {
   memberCount  Int?     @default(0) @map("member_count")
   lastActivity BigInt   @map("last_activity")
   recentEvents Json     @default("[]") @map("recent_events")
+  ignoringChannels Json @default("[]") @map("ignoring_channels")
+  listeningChannels Json @default("[]") @map("listening_channels")
+  commandPrefix String? @default("!") @map("command_prefix")
 
   @@map("server_profiles")
 }

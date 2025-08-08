@@ -2,6 +2,7 @@ import { Client, Events } from "discord.js";
 import { Logger } from "../utils/logger.js";
 import { ChannelManager } from "../utils/channelManager.js";
 import { DatabaseCRUD } from "../database/operations.js";
+import { MessageProcessor } from "../utils/messageProcessor.js";
 
 export default {
   name: Events.ClientReady,
@@ -13,7 +14,7 @@ export default {
     Logger.info(`Serving ${client.users.cache.size} users`);
 
     // Initialize and log channel configuration
-    const channelManager = new ChannelManager(client);
+    const channelManager = (client as any).channelManager as ChannelManager;
     channelManager.logConfiguration();
 
     const stats = channelManager.getChannelStats();
@@ -45,6 +46,7 @@ export default {
 
           // Create server profiles for connected guilds
           const crud = new DatabaseCRUD(databaseManager.getDatabase());
+          const messageProcessor = (client as any).messageProcessor as MessageProcessor;
           for (const guild of client.guilds.cache.values()) {
             await crud.createServerProfile({
               serverId: guild.id,
@@ -52,8 +54,20 @@ export default {
               ownerId: guild.ownerId,
               memberCount: guild.memberCount,
               recentEvents: [],
+              ignoringChannels: [],
+              listeningChannels: [],
+              commandPrefix: '!',
               lastActivity: Math.floor(Date.now() / 1000),
             });
+
+            const profile = await crud.getServerProfile(guild.id);
+            if (profile) {
+              profile.listeningChannels.forEach((id) => channelManager.addListenChannel(id));
+              profile.ignoringChannels.forEach((id) => channelManager.addIgnoredChannel(id));
+              if (profile.commandPrefix) {
+                messageProcessor.setCommandPrefix(guild.id, profile.commandPrefix);
+              }
+            }
           }
         } else {
           Logger.error("❌ Database Manager initialization failed");

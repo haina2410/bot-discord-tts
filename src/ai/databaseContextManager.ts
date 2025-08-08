@@ -199,6 +199,9 @@ export class DatabaseContextManager {
         serverId,
         serverName,
         recentEvents: [],
+        ignoringChannels: [],
+        listeningChannels: [],
+        commandPrefix: '!',
         lastActivity: Date.now(),
       };
       await this.crud.createServerProfile(context);
@@ -223,15 +226,7 @@ export class DatabaseContextManager {
       lastActivity: message.timestamp,
     };
     await this.crud.updateServerProfile(context.serverId, updates);
-    await this.crud.addServerRecentEvent(
-      context.serverId,
-      "message",
-      message.author.username
-    );
-
     context.lastActivity = message.timestamp;
-    context.recentEvents.unshift(`message:${message.author.username}`);
-    context.recentEvents = context.recentEvents.slice(0, 10);
   }
 
   /**

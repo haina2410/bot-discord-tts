@@ -20,6 +20,10 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     preferred_response_style TEXT CHECK(preferred_response_style IN ('casual', 'formal', 'friendly', 'technical')),
     timezone TEXT,                             -- User's timezone (e.g., 'America/New_York')
     language TEXT,                             -- User's preferred language (e.g., 'en', 'vi')
+    bio TEXT,                                  -- Short biography or background
+    goals TEXT,                                -- User's goals or objectives
+    preferences TEXT,                          -- Specific preferences
+    notes TEXT,                                -- General notes
     created_at INTEGER DEFAULT (strftime('%s', 'now')),
     updated_at INTEGER DEFAULT (strftime('%s', 'now'))
 );
@@ -79,6 +83,40 @@ CREATE TABLE IF NOT EXISTS user_recent_topics (
 
 CREATE INDEX IF NOT EXISTS idx_user_recent_topics_user_id ON user_recent_topics(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_recent_topics_mentioned_at ON user_recent_topics(mentioned_at);
+
+-- =============================================================================
+-- SERVER PROFILES TABLE
+-- =============================================================================
+-- Stores information about Discord servers (guilds)
+CREATE TABLE IF NOT EXISTS server_profiles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id TEXT NOT NULL UNIQUE,            -- Discord server ID
+    server_name TEXT NOT NULL,                 -- Server name
+    owner_id TEXT,                             -- Server owner ID
+    member_count INTEGER DEFAULT 0,            -- Current member count
+    last_activity INTEGER NOT NULL,            -- Unix timestamp of last activity
+    created_at INTEGER DEFAULT (strftime('%s', 'now')),
+    updated_at INTEGER DEFAULT (strftime('%s', 'now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_server_profiles_server_id ON server_profiles(server_id);
+CREATE INDEX IF NOT EXISTS idx_server_profiles_last_activity ON server_profiles(last_activity);
+
+-- =============================================================================
+-- SERVER RECENT EVENTS TABLE
+-- =============================================================================
+-- Stores recent events in servers for additional context
+CREATE TABLE IF NOT EXISTS server_recent_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id TEXT NOT NULL,                   -- References server_profiles.server_id
+    event TEXT NOT NULL,                       -- Event description or type
+    detail TEXT,                               -- Additional event detail
+    occurred_at INTEGER DEFAULT (strftime('%s', 'now')),
+    FOREIGN KEY (server_id) REFERENCES server_profiles(server_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_server_events_server_id ON server_recent_events(server_id);
+CREATE INDEX IF NOT EXISTS idx_server_events_occurred_at ON server_recent_events(occurred_at);
 
 -- =============================================================================
 -- CHANNEL CONTEXTS TABLE
@@ -196,10 +234,17 @@ BEGIN
 END;
 
 -- Update channel_contexts.updated_at on changes
-CREATE TRIGGER IF NOT EXISTS update_channel_contexts_timestamp 
+CREATE TRIGGER IF NOT EXISTS update_channel_contexts_timestamp
     AFTER UPDATE ON channel_contexts
 BEGIN
     UPDATE channel_contexts SET updated_at = strftime('%s', 'now') WHERE channel_id = NEW.channel_id;
+END;
+
+-- Update server_profiles.updated_at on changes
+CREATE TRIGGER IF NOT EXISTS update_server_profiles_timestamp
+    AFTER UPDATE ON server_profiles
+BEGIN
+    UPDATE server_profiles SET updated_at = strftime('%s', 'now') WHERE server_id = NEW.server_id;
 END;
 
 -- =============================================================================
@@ -217,6 +262,10 @@ SELECT
     up.preferred_response_style,
     up.timezone,
     up.language,
+    up.bio,
+    up.goals,
+    up.preferences,
+    up.notes,
     up.created_at,
     up.updated_at,
     GROUP_CONCAT(DISTINCT ui.interest) as interests,

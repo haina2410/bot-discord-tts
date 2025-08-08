@@ -1,6 +1,7 @@
 import { Client, Events } from "discord.js";
 import { Logger } from "../utils/logger.js";
 import { ChannelManager } from "../utils/channelManager.js";
+import { DatabaseCRUD } from "../database/operations.js";
 
 export default {
   name: Events.ClientReady,
@@ -40,6 +41,19 @@ export default {
             Logger.info(
               `📊 Database: ${dbStats.sizeMB}MB, ${dbStats.tables} tables, ${dbStats.journalMode} mode`
             );
+          }
+
+          // Create server profiles for connected guilds
+          const crud = new DatabaseCRUD(databaseManager.getDatabase());
+          for (const guild of client.guilds.cache.values()) {
+            await crud.createServerProfile({
+              serverId: guild.id,
+              serverName: guild.name,
+              ownerId: guild.ownerId,
+              memberCount: guild.memberCount,
+              recentEvents: [],
+              lastActivity: Math.floor(Date.now() / 1000),
+            });
           }
         } else {
           Logger.error("❌ Database Manager initialization failed");

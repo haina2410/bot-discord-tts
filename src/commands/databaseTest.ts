@@ -26,7 +26,7 @@ export const databaseTestCommand = {
             }
 
             // Test 2: Get database statistics
-            const stats = databaseManager.getStats();
+            const stats = await databaseManager.getStats();
             if (!stats) {
                 await message.reply('❌ Không thể lấy thống kê database.');
                 return;
@@ -34,13 +34,13 @@ export const databaseTestCommand = {
 
             // Test 3: Perform health check
             const healthCheck = await databaseManager.healthCheck();
-            
+
             // Test 4: Try a simple query
             let queryTest = false;
             try {
                 const db = databaseManager.getDatabase();
-                const result = db.prepare('SELECT COUNT(*) as count FROM sqlite_master WHERE type="table"').get() as any;
-                queryTest = result.count > 0;
+                const result: any = await db.$queryRaw`SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema='public'`;
+                queryTest = Number(result[0].count) > 0;
             } catch (error) {
                 Logger.error('Query test failed:', error);
             }
@@ -48,10 +48,12 @@ export const databaseTestCommand = {
             // Test 5: Test transaction functionality
             let transactionTest = false;
             try {
-                const result = databaseManager.transaction((db) => {
-                    return db.prepare('SELECT 1 as test').get();
+                const db = databaseManager.getDatabase();
+                const result = await db.$transaction(async (tx: any) => {
+                    const rows: any = await tx.$queryRaw`SELECT 1 as test`;
+                    return rows[0];
                 });
-                transactionTest = result !== null;
+                transactionTest = result?.test === 1;
             } catch (error) {
                 Logger.error('Transaction test failed:', error);
             }
@@ -78,7 +80,7 @@ export const databaseTestCommand = {
                     { name: '🔍 Query Test', value: testResults.query ? '✅ Passed' : '❌ Failed', inline: true },
                     { name: '🔄 Transaction Test', value: testResults.transaction ? '✅ Passed' : '❌ Failed', inline: true },
                     { name: '📈 Overall Score', value: `${passedTests}/${totalTests} tests passed`, inline: true },
-                    { name: '💾 Database Info', value: `${stats.sizeMB}MB • ${stats.tables} tables • ${stats.journalMode} mode`, inline: false }
+                    { name: '💾 Database Info', value: `${stats.users} users • ${stats.channels} channels • ${stats.messages} messages`, inline: false }
                 ],
                 color: passedTests === totalTests ? 0x00FF00 : (passedTests > totalTests / 2 ? 0xFFFF00 : 0xFF0000),
                 timestamp: new Date().toISOString()
@@ -132,54 +134,38 @@ export const databaseSchemaTestCommand = {
             // Test 1: Check required tables exist
             const requiredTables = [
                 'user_profiles',
-                'user_interests',
-                'user_personality_traits',
-                'user_recent_topics',
                 'channel_contexts',
-                'channel_recent_topics',
-                'channel_active_users',
-                'conversation_history',
-                'message_topics',
-                'database_metadata'
+                'server_profiles',
+                'conversation_history'
             ];
 
-            const existingTables = db.prepare(`
-                SELECT name FROM sqlite_master 
-                WHERE type='table' AND name NOT LIKE 'sqlite_%'
-                ORDER BY name
-            `).all().map((row: any) => row.name);
+            const existingTablesRes: any = await db.$queryRaw`SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name`;
+            const existingTables = existingTablesRes.map((row: any) => row.table_name);
 
-            const missingTables = requiredTables.filter(table => !existingTables.includes(table));
-            const extraTables = existingTables.filter(table => !requiredTables.includes(table));
+            const missingTables = requiredTables.filter((table: string) => !existingTables.includes(table));
+            const extraTables = existingTables.filter((table: string) => !requiredTables.includes(table));
 
             // Test 2: Check views exist
-            const views = db.prepare(`
-                SELECT name FROM sqlite_master 
-                WHERE type='view'
-                ORDER BY name
-            `).all().map((row: any) => row.name);
+            const viewsRes: any = await db.$queryRaw`SELECT table_name FROM information_schema.views WHERE table_schema='public' ORDER BY table_name`;
+            const views = viewsRes.map((row: any) => row.table_name);
 
             // Test 3: Check indexes exist
-            const indexes = db.prepare(`
-                SELECT name, tbl_name FROM sqlite_master 
-                WHERE type='index' AND name NOT LIKE 'sqlite_%'
-                ORDER BY name
-            `).all();
+            const indexes: any = await db.$queryRaw`SELECT indexname as name, tablename as tbl_name FROM pg_indexes WHERE schemaname='public' ORDER BY indexname`;
 
-            // Test 4: Check foreign keys are enabled
-            const foreignKeysEnabled = db.pragma('foreign_keys')[0].foreign_keys === 1;
+            // Test 4: Check foreign keys exist
+            const fkRes: any = await db.$queryRaw`SELECT 1 FROM pg_constraint WHERE contype='f'`;
+            const foreignKeysEnabled = fkRes.length > 0;
 
             // Test 5: Check triggers exist
-            const triggers = db.prepare(`
-                SELECT name, tbl_name FROM sqlite_master 
-                WHERE type='trigger'
-                ORDER BY name
-            `).all();
+            const triggers: any = await db.$queryRaw`SELECT tgname as name, tgrelid::regclass::text as tbl_name FROM pg_trigger WHERE NOT tgisinternal ORDER BY tgname`;
 
-            // Test 6: Check database metadata
-            const metadata = db.prepare(`
-                SELECT key, value FROM database_metadata
-            `).all();
+            // Test 6: Check database metadata (optional table)
+            let metadata: any[] = [];
+            try {
+                metadata = await db.$queryRaw`SELECT key, value FROM database_metadata`;
+            } catch (_) {
+                metadata = [];
+            }
 
             // Compile results
             const embed = {

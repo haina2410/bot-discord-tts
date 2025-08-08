@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model UserProfile {
+  userId               String   @id @map("user_id")
+  username             String
+  displayName          String?  @map("display_name")
+  interactionCount     Int      @default(0) @map("interaction_count")
+  lastSeen             BigInt   @map("last_seen")
+  preferredResponseStyle String? @map("preferred_response_style")
+  timezone             String?
+  language             String?
+  bio                  String?
+  goals                String?
+  preferences          String?
+  notes                String?
+  interests            Json     @default("[]")
+  personality          Json     @default("[]")
+  recentTopics         Json     @default("[]") @map("recent_topics")
+
+  @@map("user_profiles")
+}
+
+model ChannelContext {
+  channelId       String   @id @map("channel_id")
+  channelName     String   @map("channel_name")
+  channelType     String   @map("channel_type")
+  conversationTone String   @default("casual") @map("conversation_tone")
+  lastActivity    BigInt   @map("last_activity")
+  recentTopics    Json     @default("[]") @map("recent_topics")
+  activeUsers     Json     @default("[]") @map("active_users")
+
+  @@map("channel_contexts")
+}
+
+model ServerProfile {
+  serverId     String   @id @map("server_id")
+  serverName   String   @map("server_name")
+  ownerId      String?  @map("owner_id")
+  memberCount  Int?     @default(0) @map("member_count")
+  lastActivity BigInt   @map("last_activity")
+  recentEvents Json     @default("[]") @map("recent_events")
+
+  @@map("server_profiles")
+}
+
+model ConversationHistory {
+  id            Int      @id @default(autoincrement())
+  channelId     String   @map("channel_id")
+  userId        String?  @map("user_id")
+  role          String
+  content       String
+  timestamp     BigInt
+  author        String?
+  relevanceScore Float?  @default(0) @map("relevance_score")
+
+  @@map("conversation_history")
+}

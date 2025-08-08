@@ -12,7 +12,7 @@ export async function loadEvents(client: Client) {
 
   try {
     const eventFiles = readdirSync(eventsPath).filter(
-      (file) => file.endsWith(".js") && !file.endsWith(".d.ts")
+      (file) => file.endsWith(".ts") && !file.endsWith(".d.ts")
     );
 
     Logger.info(`Loading ${eventFiles.length} event handlers...`);

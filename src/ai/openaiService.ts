@@ -32,7 +32,7 @@ export interface ConversationContext {
 
 export class OpenAIService {
   private client: OpenAI;
-  private model: string = "gpt-4o-mini"; // Cost-effective model for chat
+  private model: string = "gpt-4.1-mini"; // Cost-effective model for chat
   private maxTokens: number = 500;
   private temperature: number = 0.7;
 

@@ -2,6 +2,7 @@ import { Client } from "discord.js";
 import { readdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { Logger } from "./logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,7 +15,7 @@ export async function loadEvents(client: Client) {
       (file) => file.endsWith(".js") && !file.endsWith(".d.ts")
     );
 
-    console.log(`Loading ${eventFiles.length} event handlers...`);
+    Logger.info(`Loading ${eventFiles.length} event handlers...`);
 
     for (const file of eventFiles) {
       const filePath = join(eventsPath, file);
@@ -30,14 +31,12 @@ export async function loadEvents(client: Client) {
             event.default.execute(...args)
           );
         }
-        console.log(`✅ Loaded event: ${event.default.name}`);
+        Logger.success(`Loaded event: ${event.default.name}`);
       } else {
-        console.warn(
-          `⚠️  Event file ${file} is missing name or execute function`
-        );
+        Logger.warn(`Event file ${file} is missing name or execute function`);
       }
     }
   } catch (error) {
-    console.error("Error loading events:", error);
+    Logger.error("Error loading events:", error);
   }
 }

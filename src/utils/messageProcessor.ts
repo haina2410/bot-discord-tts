@@ -169,7 +169,7 @@ export class MessageProcessor {
      */
     setChannelListeningMode(channelId: string, mode: ListeningMode): void {
         this.channelListeningModes.set(channelId, mode);
-        Logger.info(`🔧 Set listening mode for channel ${channelId}: ${mode.mode}${mode.threshold ? ` (threshold: ${mode.threshold})` : ''}`);
+        Logger.info(`Set listening mode for channel ${channelId}: ${mode.mode}${mode.threshold ? ` (threshold: ${mode.threshold})` : ''}`);
     }
 
     /**
@@ -184,7 +184,7 @@ export class MessageProcessor {
      */
     setDefaultListeningMode(mode: ListeningMode): void {
         this.defaultListeningMode = mode;
-        Logger.info(`🔧 Set default listening mode: ${mode.mode}${mode.threshold ? ` (threshold: ${mode.threshold})` : ''}`);
+        Logger.info(`Set default listening mode: ${mode.mode}${mode.threshold ? ` (threshold: ${mode.threshold})` : ''}`);
     }
 
     /**
@@ -228,24 +228,21 @@ export class MessageProcessor {
      * Log processed message information
      */
     logMessage(processedMessage: ProcessedMessage) {
-        const emoji = processedMessage.messageType === 'command' ? '⚡' :
-                     processedMessage.messageType === 'mention' ? '👋' : '💬';
-        
-        Logger.info(
-            `${emoji} ${processedMessage.messageType.toUpperCase()} from ${processedMessage.author.tag} ` +
+        Logger.debug(
+            `${processedMessage.messageType.toUpperCase()} from ${processedMessage.author.tag} ` +
             `in #${processedMessage.channel.name}: ${processedMessage.content.substring(0, 100)}${processedMessage.content.length > 100 ? '...' : ''}`
         );
 
         if (processedMessage.mentions.users.length > 0) {
-            Logger.debug(`👥 Mentions ${processedMessage.mentions.users.length} user(s)`);
+            Logger.debug(`Mentions ${processedMessage.mentions.users.length} user(s)`);
         }
 
         if (processedMessage.attachments.count > 0) {
-            Logger.debug(`📎 Has ${processedMessage.attachments.count} attachment(s)`);
+            Logger.debug(`Has ${processedMessage.attachments.count} attachment(s)`);
         }
 
         if (processedMessage.isReply) {
-            Logger.debug(`↩️  Reply to message ${processedMessage.replyTo}`);
+            Logger.debug(`Reply to message ${processedMessage.replyTo}`);
         }
     }
 }

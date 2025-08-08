@@ -65,10 +65,7 @@ export default {
 
     // Process message with enhanced processor
     if (!messageProcessor) {
-      Logger.warn("Message processor not initialized, using basic logging");
-      Logger.info(
-        `📨 Message from ${message.author.tag} in #${channelInfo.name}: ${message.content}`
-      );
+      Logger.warn("Message processor not initialized, skipping processing");
       return;
     }
 
@@ -88,7 +85,7 @@ export default {
 
     // Handle mentions and AI-worthy messages
     if (messageProcessor.shouldTriggerAI(processedMessage)) {
-      Logger.info("🧠 Message should trigger AI response");
+      Logger.info("Message should trigger AI response");
 
       if (aiManager) {
         try {
@@ -108,7 +105,7 @@ export default {
           if (aiResponse) {
             // Send AI response as text
             await message.reply(aiResponse);
-            Logger.success(`✅ AI response sent to ${message.author.tag}`);
+            Logger.success(`AI response sent to ${message.author.tag}`);
 
             // Convert AI response to speech and play in voice channel (if available)
             if (ttsManager && voiceManager && message.guild) {
@@ -120,7 +117,7 @@ export default {
 
                 if (isInVoiceChannel) {
                   Logger.info(
-                    "🔊 Converting AI response to speech for voice channel..."
+                    "Converting AI response to speech for voice channel..."
                   );
 
                   // Generate TTS audio for Discord playback (temporary file)
@@ -137,48 +134,48 @@ export default {
 
                     if (playbackResult.success) {
                       Logger.success(
-                        `🎵 TTS audio played successfully (${playbackResult.duration}ms)`
+                        `TTS audio played successfully (${playbackResult.duration}ms)`
                       );
                     } else {
                       Logger.warn(
-                        `⚠️ TTS audio generation succeeded but playback failed: ${playbackResult.error}`
+                        `TTS audio generation succeeded but playback failed: ${playbackResult.error}`
                       );
                     }
                   } else {
-                    Logger.warn(`⚠️ TTS conversion failed: ${ttsResult.error}`);
+                    Logger.warn(`TTS conversion failed: ${ttsResult.error}`);
                   }
                 } else {
                   Logger.info(
-                    "💬 Bot not in voice channel - text response only"
+                    "Bot not in voice channel - text response only"
                   );
                 }
               } catch (ttsError) {
-                Logger.error("❌ TTS processing error:", ttsError);
+                Logger.error("TTS processing error:", ttsError);
                 // Don't fail the entire response if TTS fails
               }
             } else {
               Logger.info(
-                "💬 TTS/Voice managers not available - text response only"
+                "TTS/Voice managers not available - text response only"
               );
             }
           }
         } catch (error) {
-          Logger.error("❌ Error processing AI response:", error);
+          Logger.error("Error processing AI response:", error);
           // Send fallback response
           await message.reply(
             "Mình đang gặp chút khó khăn trong việc suy nghĩ, nhưng mình vẫn ở đây và đang lắng nghe! 🤖"
           );
         }
       } else {
-        Logger.warn(
-          "⚠️ AI Manager not initialized, cannot process AI response"
-        );
+          Logger.warn(
+            "AI Manager not initialized, cannot process AI response"
+          );
       }
     }
 
     // TODO: Store user data in database (will be implemented in Task 6-7)
 
     // Log the structured data for debugging
-    Logger.debug("📊 Processed message data:", processedMessage);
+    Logger.debug("Processed message data:", processedMessage);
   },
 };

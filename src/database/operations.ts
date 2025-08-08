@@ -276,11 +276,12 @@ export class DatabaseCRUD implements DatabaseOperations {
   // ======================= SERVER PROFILES =======================
   async createServerProfile(profile: ServerContext): Promise<boolean> {
     try {
+      // Cast JSON.stringify result to jsonb using :: operator
       await this.prisma.$executeRaw`
         INSERT INTO server_profiles (
            server_id, server_name, owner_id, member_count, last_activity, recent_events
          ) VALUES (
-           ${profile.serverId}, ${profile.serverName}, ${profile.ownerId ?? null}, ${profile.memberCount ?? 0}, ${profile.lastActivity}, ${JSON.stringify(profile.recentEvents)}
+           ${profile.serverId}, ${profile.serverName}, ${profile.ownerId ?? null}, ${profile.memberCount ?? 0}, ${profile.lastActivity}, ${JSON.stringify(profile.recentEvents)}::jsonb
          )
          ON CONFLICT (server_id) DO UPDATE SET
            server_name=EXCLUDED.server_name,

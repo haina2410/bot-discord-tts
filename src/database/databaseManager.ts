@@ -22,9 +22,7 @@ export class DatabaseManager {
   async initialize(): Promise<boolean> {
     try {
       Logger.info('🗄️ Connecting to PostgreSQL database via Prisma...');
-      this.prisma = new PrismaClient({
-        datasources: { db: { url: this.config.connectionString } },
-      });
+      this.prisma = new PrismaClient();
       await this.prisma.$connect();
       await this.setupSchema();
       this.ready = true;

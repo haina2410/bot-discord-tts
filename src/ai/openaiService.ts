@@ -226,9 +226,9 @@ Ghi nhớ: Phản hồi của bạn sẽ giúp xây dựng hồ sơ của ngư�
     maxTokens?: number;
     temperature?: number;
   }) {
-    if (config.model) this.model = config.model;
-    if (config.maxTokens) this.maxTokens = config.maxTokens;
-    if (config.temperature) this.temperature = config.temperature;
+    if (config.model !== undefined) this.model = config.model;
+    if (config.maxTokens !== undefined) this.maxTokens = config.maxTokens;
+    if (config.temperature !== undefined) this.temperature = config.temperature;
 
     Logger.info("🔧 OpenAI configuration updated:", this.getModelInfo());
   }
